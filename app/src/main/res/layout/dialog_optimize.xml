@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog_surface"
+    android:orientation="vertical"
+    android:paddingLeft="24dp"
+    android:paddingTop="24dp"
+    android:paddingRight="24dp"
+    android:paddingBottom="18dp">
+
+    <TextView
+        android:id="@+id/textDialogTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="清理相机数据并强制停止"
+        android:textColor="@color/lumo_text_main"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/textDialogMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="已保存当前设置，正在处理相机数据。"
+        android:textColor="@color/lumo_text_second"
+        android:textSize="16sp"
+        android:lineSpacingExtra="3dp" />
+
+    <Button
+        android:id="@+id/buttonDialogOk"
+        android:layout_width="96dp"
+        android:layout_height="48dp"
+        android:layout_gravity="right"
+        android:layout_marginTop="28dp"
+        android:background="@drawable/bg_dialog_text_button"
+        android:stateListAnimator="@null"
+        android:text="确定"
+        android:textColor="@color/lumo_primary"
+        android:textSize="18sp" />
+
+</LinearLayout>

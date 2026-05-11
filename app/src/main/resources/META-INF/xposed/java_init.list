@@ -1,0 +1,6 @@
+com.camera.lumo.ModuleMain
+com.camera.CameraUnit.CameraUnitConfigModule
+com.camera.Protobuf.ProtobufModule
+com.camera.VendorTag.VendorTagModule
+com.camera.gr.GrModule
+com.camera.vibe.VibeModule

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="lumo_bg">#F7F7FA</color>
+    <color name="lumo_card">#FFFFFF</color>
+
+    <color name="lumo_primary">#5E43A5</color>
+    <color name="lumo_primary_dark">#4C3586</color>
+    <color name="lumo_primary_light">#E9E0FF</color>
+    <color name="lumo_primary_container">#EADDFF</color>
+    <color name="lumo_on_primary">#FFFFFF</color>
+
+    <color name="lumo_text_main">#111111</color>
+    <color name="lumo_text_second">#777A80</color>
+    <color name="lumo_text_hint">#9A9DA3</color>
+
+    <color name="lumo_outline">#DAD6E0</color>
+    <color name="lumo_divider">#ECE8F1</color>
+    <color name="lumo_error">#B3261E</color>
+
+    <color name="lumo_status_green">#E7F8EC</color>
+    <color name="lumo_status_gray">#F0F0F2</color>
+    <color name="lumo_status_text_ok">#0E3B1D</color>
+    <color name="lumo_status_text_bad">#6F7278</color>
+
+    <color name="lumo_nav_inactive">#222222</color>
+    <color name="lumo_nav_active">#4A7DE1</color>
+
+    <color name="lumo_switch_checked_thumb">#FFFFFF</color>
+    <color name="lumo_switch_checked_track">#6E56B1</color>
+    <color name="lumo_switch_unchecked_thumb">#F2F2F2</color>
+    <color name="lumo_switch_unchecked_track">#DBDBDB</color>
+
+    <!-- 兼容旧资源 -->
+    <color name="lumo_input_bg">#F7F2FA</color>
+    <color name="lumo_preview_bg">#E7E0EC</color>
+</resources>

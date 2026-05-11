@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">真我相机补全</string>
+    <string name="app_desc">用于强制开启真我相机不支持的功能。</string>
+</resources>
