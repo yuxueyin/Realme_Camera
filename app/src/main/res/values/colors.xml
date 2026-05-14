@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Google Material Design 3 / Material You light scheme tokens -->
+    <color name="lumo_bg">#FFFBFE</color>
+    <color name="lumo_card">#FFFBFE</color>
+    <color name="lumo_surface">#FFFBFE</color>
+    <color name="lumo_surface_dim">#DED8E1</color>
+    <color name="lumo_surface_bright">#FFFBFE</color>
+    <color name="lumo_surface_container_lowest">#FFFFFF</color>
+    <color name="lumo_surface_container_low">#F7F2FA</color>
+    <color name="lumo_surface_container">#F3EDF7</color>
+    <color name="lumo_surface_container_high">#ECE6F0</color>
+    <color name="lumo_surface_container_highest">#E6E0E9</color>
+
+    <color name="lumo_primary">#6750A4</color>
+    <color name="lumo_primary_dark">#4F378B</color>
+    <color name="lumo_primary_light">#EADDFF</color>
+    <color name="lumo_primary_container">#EADDFF</color>
+    <color name="lumo_on_primary">#FFFFFF</color>
+    <color name="lumo_on_primary_container">#21005D</color>
+
+    <color name="lumo_secondary">#625B71</color>
+    <color name="lumo_secondary_container">#E8DEF8</color>
+    <color name="lumo_on_secondary_container">#1D192B</color>
+
+    <color name="lumo_tertiary">#7D5260</color>
+    <color name="lumo_tertiary_container">#FFD8E4</color>
+    <color name="lumo_on_tertiary_container">#31111D</color>
+
+    <color name="lumo_text_main">#1D1B20</color>
+    <color name="lumo_text_second">#49454F</color>
+    <color name="lumo_text_hint">#79747E</color>
+
+    <color name="lumo_outline">#79747E</color>
+    <color name="lumo_outline_variant">#CAC4D0</color>
+    <color name="lumo_divider">#CAC4D0</color>
+    <color name="lumo_error">#B3261E</color>
+    <color name="lumo_error_container">#F9DEDC</color>
+    <color name="lumo_on_error_container">#410E0B</color>
+
+    <color name="lumo_status_green">#DDE5D8</color>
+    <color name="lumo_status_gray">#E6E0E9</color>
+    <color name="lumo_status_text_ok">#1B1F18</color>
+    <color name="lumo_status_text_bad">#49454F</color>
+
+    <color name="lumo_nav_inactive">#49454F</color>
+    <color name="lumo_nav_active">#6750A4</color>
+
+    <color name="lumo_switch_checked_thumb">#FFFFFF</color>
+    <color name="lumo_switch_checked_track">#6750A4</color>
+    <color name="lumo_switch_unchecked_thumb">#F7F2FA</color>
+    <color name="lumo_switch_unchecked_track">#CAC4D0</color>
+
+    <!-- 兼容旧资源 -->
+    <color name="lumo_input_bg">#F7F2FA</color>
+    <color name="lumo_preview_bg">#E7E0EC</color>
+</resources>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 外层圆角底 -->
+    <path
+        android:fillColor="#5E43A5"
+        android:pathData="M26,6 L82,6 C94,6 102,14 102,26 L102,82 C102,94 94,102 82,102 L26,102 C14,102 6,94 6,82 L6,26 C6,14 14,6 26,6 Z" />
+
+    <!-- 内层浅紫高光 -->
+    <path
+        android:fillColor="#7D67C7"
+        android:fillAlpha="0.55"
+        android:pathData="M28,13 L80,13 C89,13 95,19 95,28 L95,80 C95,89 89,95 80,95 L28,95 C19,95 13,89 13,80 L13,28 C13,19 19,13 28,13 Z" />
+
+    <!-- 相机机身阴影 -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0.18"
+        android:pathData="M24,42 L35,42 L42,34 L66,34 L73,42 L84,42 C89,42 93,46 93,51 L93,76 C93,82 89,86 84,86 L24,86 C19,86 15,82 15,76 L15,51 C15,46 19,42 24,42 Z" />
+
+    <!-- 相机机身 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M23,39 L34,39 L41,31 L67,31 L74,39 L85,39 C90,39 94,43 94,48 L94,74 C94,80 90,84 85,84 L23,84 C18,84 14,80 14,74 L14,48 C14,43 18,39 23,39 Z" />
+
+    <!-- 顶部镜头凸起 -->
+    <path
+        android:fillColor="#EADDFF"
+        android:pathData="M42,31 L66,31 L72,39 L36,39 Z" />
+
+    <!-- 小取景器 -->
+    <path
+        android:fillColor="#5E43A5"
+        android:pathData="M76,46 C79,46 82,49 82,52 C82,55 79,58 76,58 C73,58 70,55 70,52 C70,49 73,46 76,46 Z" />
+
+    <!-- 主镜头外圈 -->
+    <path
+        android:fillColor="#5E43A5"
+        android:pathData="M54,45 C65,45 74,54 74,65 C74,76 65,85 54,85 C43,85 34,76 34,65 C34,54 43,45 54,45 Z" />
+
+    <!-- 主镜头中圈 -->
+    <path
+        android:fillColor="#23153F"
+        android:pathData="M54,50 C62.3,50 69,56.7 69,65 C69,73.3 62.3,80 54,80 C45.7,80 39,73.3 39,65 C39,56.7 45.7,50 54,50 Z" />
+
+    <!-- 镜头高光 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.92"
+        android:pathData="M49,56 C52,56 55,59 55,62 C55,65 52,68 49,68 C46,68 43,65 43,62 C43,59 46,56 49,56 Z" />
+
+    <!-- 镜头紫色反光 -->
+    <path
+        android:fillColor="#9B8BE3"
+        android:fillAlpha="0.9"
+        android:pathData="M60,57 C63,57 66,60 66,63 C66,66 63,69 60,69 C57,69 54,66 54,63 C54,60 57,57 60,57 Z" />
+
+    <!-- 光圈叶片 1 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.36"
+        android:pathData="M54,51 L62,58 L55,63 L48,57 Z" />
+
+    <!-- 光圈叶片 2 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.26"
+        android:pathData="M67,64 L60,72 L55,64 L62,58 Z" />
+
+    <!-- 光圈叶片 3 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.22"
+        android:pathData="M54,79 L46,72 L54,66 L60,72 Z" />
+
+    <!-- 左上角闪光点 -->
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M27,24 L30,31 L37,34 L30,37 L27,44 L24,37 L17,34 L24,31 Z" />
+
+    <!-- 右上角小点 -->
+    <path
+        android:fillColor="#EADDFF"
+        android:pathData="M83,24 C86,24 88,26 88,29 C88,32 86,34 83,34 C80,34 78,32 78,29 C78,26 80,24 83,24 Z" />
+
+    <!-- 左下角小装饰 -->
+    <path
+        android:fillColor="#EADDFF"
+        android:fillAlpha="0.7"
+        android:pathData="M25,84 C28,84 30,86 30,89 C30,92 28,94 25,94 C22,94 20,92 20,89 C20,86 22,84 25,84 Z" />
+
+</vector>

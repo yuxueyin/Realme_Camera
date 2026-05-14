@@ -1,0 +1,858 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/lumo_bg">
+
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="76dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/bg_bottom_bar"
+        android:elevation="3dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp">
+
+        <LinearLayout
+            android:id="@+id/tabHome"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_marginLeft="2dp"
+            android:layout_marginRight="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_nav_item_active"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iconHome"
+                android:layout_width="21dp"
+                android:layout_height="21dp"
+                android:src="@android:drawable/ic_menu_view"
+                android:tint="@color/lumo_nav_active" />
+
+            <TextView
+                android:id="@+id/textHome"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:includeFontPadding="false"
+                android:text="首页"
+                android:textColor="@color/lumo_nav_active"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tabCamera"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_marginLeft="2dp"
+            android:layout_marginRight="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_nav_item_inactive"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iconCamera"
+                android:layout_width="21dp"
+                android:layout_height="21dp"
+                android:src="@android:drawable/ic_menu_camera"
+                android:tint="@color/lumo_nav_inactive" />
+
+            <TextView
+                android:id="@+id/textCamera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:includeFontPadding="false"
+                android:text="相机设置"
+                android:textColor="@color/lumo_nav_inactive"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tabAlbum"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_marginLeft="2dp"
+            android:layout_marginRight="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_nav_item_inactive"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iconAlbum"
+                android:layout_width="21dp"
+                android:layout_height="21dp"
+                android:src="@android:drawable/ic_menu_gallery"
+                android:tint="@color/lumo_nav_inactive" />
+
+            <TextView
+                android:id="@+id/textAlbum"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:includeFontPadding="false"
+                android:text="相册设置"
+                android:textColor="@color/lumo_nav_inactive"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tabModule"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_marginLeft="2dp"
+            android:layout_marginRight="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_nav_item_inactive"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iconModule"
+                android:layout_width="21dp"
+                android:layout_height="21dp"
+                android:src="@android:drawable/ic_menu_manage"
+                android:tint="@color/lumo_nav_inactive" />
+
+            <TextView
+                android:id="@+id/textModule"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:includeFontPadding="false"
+                android:text="模块设置"
+                android:textColor="@color/lumo_nav_inactive"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/mainScroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomBar"
+        android:fillViewport="true"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="18dp"
+            android:paddingTop="28dp"
+            android:paddingRight="18dp"
+            android:paddingBottom="12dp">
+
+            <LinearLayout
+                android:id="@+id/headerCard"
+                android:layout_width="match_parent"
+                android:layout_height="96dp"
+                android:background="@drawable/bg_page_header"
+                android:elevation="0dp"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <TextView
+                    android:id="@+id/textPageTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:includeFontPadding="false"
+                    android:text="首页"
+                    android:textColor="@color/lumo_on_primary_container"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textPageSubTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:includeFontPadding="false"
+                    android:text="真我相机补全"
+                    android:textColor="@color/lumo_on_primary_container"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/pageHome"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:id="@+id/cardModuleStatus"
+                        android:layout_width="0dp"
+                        android:layout_height="142dp"
+                        android:layout_marginRight="8dp"
+                        android:layout_weight="1.18"
+                        android:background="@drawable/bg_status_card"
+                        android:elevation="0dp"
+                        android:orientation="vertical"
+                        android:paddingLeft="16dp"
+                        android:paddingTop="16dp"
+                        android:paddingRight="16dp"
+                        android:paddingBottom="14dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:text="模块状态"
+                            android:textColor="@color/lumo_text_main"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textModuleStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:includeFontPadding="true"
+                            android:text="工作中"
+                            android:textColor="@color/lumo_text_main"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textModuleDetail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:includeFontPadding="true"
+                            android:lineSpacingExtra="2dp"
+                            android:text="LSP 模块检测中\nRoot 检测中"
+                            android:textColor="@color/lumo_text_main"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="142dp"
+                        android:layout_marginLeft="8dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:id="@+id/cardFeatureCount"
+                            android:layout_width="match_parent"
+                            android:layout_height="66dp"
+                            android:background="@drawable/bg_setting_card"
+                            android:elevation="0dp"
+                            android:orientation="vertical"
+                            android:paddingLeft="16dp"
+                            android:paddingTop="10dp"
+                            android:paddingRight="16dp"
+                            android:paddingBottom="8dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="开启功能数量"
+                                android:textColor="@color/lumo_text_second"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/textFeatureCount"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:includeFontPadding="true"
+                                android:text="1"
+                                android:textColor="@color/lumo_text_main"
+                                android:textSize="21sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/cardModuleVersion"
+                            android:layout_width="match_parent"
+                            android:layout_height="66dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_setting_card"
+                            android:elevation="0dp"
+                            android:orientation="vertical"
+                            android:paddingLeft="16dp"
+                            android:paddingTop="10dp"
+                            android:paddingRight="16dp"
+                            android:paddingBottom="8dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="模块版本"
+                                android:textColor="@color/lumo_text_second"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/textModuleVersion"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:includeFontPadding="true"
+                                android:text="1.0"
+                                android:textColor="@color/lumo_text_main"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardDeviceInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_setting_card"
+                    android:elevation="0dp"
+                    android:orientation="vertical"
+                    android:paddingLeft="18dp"
+                    android:paddingTop="16dp"
+                    android:paddingRight="18dp"
+                    android:paddingBottom="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="机型"
+                        android:textColor="@color/lumo_text_second"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textDeviceModel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:includeFontPadding="true"
+                        android:text="Unknown"
+                        android:textColor="@color/lumo_text_main"
+                        android:textSize="19sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="15dp"
+                        android:includeFontPadding="false"
+                        android:text="安卓版本"
+                        android:textColor="@color/lumo_text_second"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textAndroidVersion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:includeFontPadding="true"
+                        android:text="Android"
+                        android:textColor="@color/lumo_text_main"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="15dp"
+                        android:includeFontPadding="false"
+                        android:text="系统版本"
+                        android:textColor="@color/lumo_text_second"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textSystemVersion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:includeFontPadding="true"
+                        android:text="Unknown"
+                        android:textColor="@color/lumo_text_main"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="15dp"
+                        android:includeFontPadding="false"
+                        android:text="相机版本"
+                        android:textColor="@color/lumo_text_second"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textCameraVersion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:includeFontPadding="true"
+                        android:text="Unknown"
+                        android:textColor="@color/lumo_text_main"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/pageCamera"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/cardGrSupport"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_setting_card"
+                    android:clickable="true"
+                    android:elevation="0dp"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:minHeight="106dp"
+                    android:orientation="horizontal"
+                    android:paddingLeft="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="16dp"
+                    android:paddingBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:paddingRight="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:text="理光GR"
+                            android:textColor="@color/lumo_text_main"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:includeFontPadding="false"
+                            android:lineSpacingExtra="2dp"
+                            android:text="开启真我GT8系列专属理光GR
+注意：开启后有概率会导致界面卡住/照片黑屏，请更换合适的相机"
+                            android:textColor="@color/lumo_text_second"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/textGrStatus"
+                        android:layout_width="52dp"
+                        android:layout_height="22dp"
+                        android:background="@drawable/bg_feature_chip_off"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:text="未开启"
+                        android:textColor="@color/lumo_status_text_bad"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardVibeSupport"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_setting_card"
+                    android:clickable="true"
+                    android:elevation="0dp"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:minHeight="92dp"
+                    android:orientation="horizontal"
+                    android:paddingLeft="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="16dp"
+                    android:paddingBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:paddingRight="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:text="影调"
+                            android:textColor="@color/lumo_text_main"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:includeFontPadding="false"
+                            android:lineSpacingExtra="2dp"
+                            android:text="开启Neo8专属功能
+注意：会和自带的大师模式冲突，大师模式会变成长按相机启动"
+                            android:textColor="@color/lumo_text_second"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/textVibeStatus"
+                        android:layout_width="52dp"
+                        android:layout_height="22dp"
+                        android:background="@drawable/bg_feature_chip_off"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:text="未开启"
+                        android:textColor="@color/lumo_status_text_bad"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/pageAlbum"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_setting_card"
+                    android:elevation="0dp"
+                    android:orientation="vertical"
+                    android:paddingLeft="18dp"
+                    android:paddingTop="16dp"
+                    android:paddingRight="18dp"
+                    android:paddingBottom="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="相册设置"
+                        android:textColor="@color/lumo_text_main"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:includeFontPadding="false"
+                        android:lineSpacingExtra="2dp"
+                        android:text="当前暂未添加相册补全项目。"
+                        android:textColor="@color/lumo_text_second"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/pageModule"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/cardRestartCamera"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_setting_card"
+                    android:elevation="0dp"
+                    android:orientation="vertical"
+                    android:paddingLeft="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="16dp"
+                    android:paddingBottom="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="重启相机/清理数据"
+                        android:textColor="@color/lumo_text_main"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:includeFontPadding="false"
+                        android:lineSpacingExtra="2dp"
+                        android:text="强制停止相机、清理相机数据并重新启动。"
+                        android:textColor="@color/lumo_text_second"
+                        android:textSize="11sp" />
+
+                    <Button
+                        android:id="@+id/buttonRestartCamera"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_primary_button"
+                        android:stateListAnimator="@null"
+                        android:textAllCaps="false"
+                        android:text="清理相机数据并重启相机"
+                        android:textColor="@color/lumo_on_primary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardLogEntry"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_setting_card"
+                    android:clickable="true"
+                    android:elevation="0dp"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:minHeight="74dp"
+                    android:orientation="horizontal"
+                    android:paddingLeft="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="16dp"
+                    android:paddingBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:paddingRight="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:text="日志功能"
+                            android:textColor="@color/lumo_text_main"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:includeFontPadding="false"
+                            android:lineSpacingExtra="2dp"
+                            android:text="抓取相机运行日志、生成 Hook 日志并清空日志。"
+                            android:textColor="@color/lumo_text_second"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/pageModuleLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+
+                <LinearLayout
+                    android:id="@+id/cardLogPath"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_setting_card"
+                    android:elevation="0dp"
+                    android:orientation="vertical"
+                    android:paddingLeft="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="16dp"
+                    android:paddingBottom="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="日志保存路径"
+                        android:textColor="@color/lumo_text_main"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textLogDir"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="monospace"
+                        android:includeFontPadding="false"
+                        android:lineSpacingExtra="3dp"
+                        android:text="/storage/emulated/0/Android/Gurd"
+                        android:textColor="@color/lumo_text_second"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardCameraRuntimeLog"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_setting_card"
+                    android:elevation="0dp"
+                    android:orientation="vertical"
+                    android:paddingLeft="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="16dp"
+                    android:paddingBottom="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="相机运行日志"
+                        android:textColor="@color/lumo_text_main"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:includeFontPadding="false"
+                        android:lineSpacingExtra="2dp"
+                        android:text="开始后会清理数据并重启相机，进入相机后请复现问题。"
+                        android:textColor="@color/lumo_text_second"
+                        android:textSize="11sp" />
+
+                    <Button
+                        android:id="@+id/buttonLogStart"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_primary_button"
+                        android:stateListAnimator="@null"
+                        android:textAllCaps="false"
+                        android:text="开始抓取日志"
+                        android:textColor="@color/lumo_on_primary"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/buttonLogStop"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_outline_button"
+                        android:stateListAnimator="@null"
+                        android:textAllCaps="false"
+                        android:text="停止抓取并生成日志"
+                        android:textColor="@color/lumo_primary"
+                        android:textSize="15sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/buttonLogRefresh"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_marginRight="6dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_outline_button"
+                            android:stateListAnimator="@null"
+                            android:textAllCaps="false"
+                            android:text="刷新状态"
+                            android:textColor="@color/lumo_primary"
+                            android:textSize="15sp" />
+
+                        <Button
+                            android:id="@+id/buttonLogClear"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_marginLeft="6dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_outline_button"
+                            android:stateListAnimator="@null"
+                            android:textAllCaps="false"
+                            android:text="清空日志"
+                            android:textColor="@color/lumo_primary"
+                            android:textSize="15sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/textLogFilesList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_log_console"
+                        android:fontFamily="monospace"
+                        android:includeFontPadding="false"
+                        android:lineSpacingExtra="3dp"
+                        android:minHeight="86dp"
+                        android:paddingLeft="10dp"
+                        android:paddingTop="10dp"
+                        android:paddingRight="10dp"
+                        android:paddingBottom="10dp"
+                        android:text="暂无日志文件"
+                        android:textColor="@color/lumo_text_second"
+                        android:textIsSelectable="true"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+</RelativeLayout>
