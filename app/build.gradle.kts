@@ -20,8 +20,8 @@ android {
         applicationId = "com.min.lite"
         minSdk = 36
         targetSdk = 36
-        versionCode = 21
-        versionName = "2.1-gr-toggle"
+        versionCode = 22
+        versionName = "2.2-ai-scenery"
     }
 
     sourceSets {

@@ -14,6 +14,7 @@ public final class VendorTagRuntimeSettings {
 
     private static final String COLUMN_GR_ENABLED = "gr_enabled";
     private static final String COLUMN_VIBE_ENABLED = "vibe_enabled";
+    private static final String COLUMN_AI_SCENERY_ENABLED = "ai_scenery_enabled";
 
     private static final String COLUMN_AVAILABLE_ZOOM_VALUES = "available_zoom_values";
     private static final String COLUMN_AVAILABLE_ZOOM_COUNT = "available_zoom_count";
@@ -59,6 +60,7 @@ public final class VendorTagRuntimeSettings {
 
             String grEnabled = getString(cursor, COLUMN_GR_ENABLED, defaults.grEnabled ? "1" : "0");
             String vibeEnabled = getString(cursor, COLUMN_VIBE_ENABLED, defaults.vibeEnabled ? "1" : "0");
+            String aiSceneryEnabled = getString(cursor, COLUMN_AI_SCENERY_ENABLED, defaults.aiSceneryEnabled ? "1" : "0");
 
             String availableZoom = getString(cursor, COLUMN_AVAILABLE_ZOOM_VALUES, defaults.availableZoomValues);
             String availableCount = getString(cursor, COLUMN_AVAILABLE_ZOOM_COUNT, String.valueOf(defaults.availableZoomCount));
@@ -69,6 +71,7 @@ public final class VendorTagRuntimeSettings {
             Settings settings = new Settings(
                     "1".equals(grEnabled),
                     "1".equals(vibeEnabled),
+                    "1".equals(aiSceneryEnabled),
                     safeTrim(availableZoom),
                     parseIntSafe(availableCount, countCommaItems(availableZoom)),
                     safeTrim(markedZoom),
@@ -80,6 +83,7 @@ public final class VendorTagRuntimeSettings {
                     "VendorTagRuntimeSettings loaded"
                             + " gr=" + (settings.grEnabled ? "1" : "0")
                             + " vibe=" + (settings.vibeEnabled ? "1" : "0")
+                            + " aiScenery=" + (settings.aiSceneryEnabled ? "1" : "0")
                             + " availableCount=" + settings.availableZoomCount
                             + " available=" + settings.availableZoomValues
                             + " markedCount=" + settings.markedZoomCount
@@ -196,6 +200,7 @@ public final class VendorTagRuntimeSettings {
 
         public final boolean grEnabled;
         public final boolean vibeEnabled;
+        public final boolean aiSceneryEnabled;
 
         public final String availableZoomValues;
         public final int availableZoomCount;
@@ -206,6 +211,7 @@ public final class VendorTagRuntimeSettings {
         public Settings(
                 boolean grEnabled,
                 boolean vibeEnabled,
+                boolean aiSceneryEnabled,
                 String availableZoomValues,
                 int availableZoomCount,
                 String markedZoomValues,
@@ -213,6 +219,7 @@ public final class VendorTagRuntimeSettings {
         ) {
             this.grEnabled = grEnabled;
             this.vibeEnabled = vibeEnabled;
+            this.aiSceneryEnabled = aiSceneryEnabled;
             this.availableZoomValues = availableZoomValues == null ? "" : availableZoomValues;
             this.availableZoomCount = Math.max(0, availableZoomCount);
             this.markedZoomValues = markedZoomValues == null ? "" : markedZoomValues;
@@ -229,6 +236,7 @@ public final class VendorTagRuntimeSettings {
             return new Settings(
                     true,
                     false,
+                    true,
                     available,
                     countCommaItems(available),
                     marked,

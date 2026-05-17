@@ -27,6 +27,15 @@ public final class VendorTagJsonEditor {
     private static final String TAG_VIBE_TELE_ZOOM_POINT_SHOW =
             "com.oplus.vibe.tele.zoom.point.show";
 
+    private static final String TAG_AI_SCENERY_MODE_SUPPORT =
+            "com.oplus.feature.ai.scenery.mode.support";
+
+    private static final String TAG_AI_SCENERY_MODE_HIGH_PIXEL_SUPPORT =
+            "com.oplus.feature.ai.scenery.mode.high.pixel.support";
+
+    private static final String TAG_AI_SCENERY_MODE_DE_HAZY_SWITCH =
+            "com.oplus.feature.ai.scenery.mode.de.hazy.switch";
+
     /*
      * 关键修复：
      *
@@ -90,6 +99,8 @@ public final class VendorTagJsonEditor {
             if (settings.vibeEnabled) {
                 tags.addAll(getVibeVendorTags());
             }
+
+            tags.addAll(getAiSceneryVendorTags(settings));
 
             int addCount = 0;
             int updateCount = 0;
@@ -163,6 +174,8 @@ public final class VendorTagJsonEditor {
                             + updateCount
                             + " vibe="
                             + (settings.vibeEnabled ? "1" : "0")
+                            + " aiScenery="
+                            + (settings.aiSceneryEnabled ? "1" : "0")
             );
 
             if (rootObject != null) {
@@ -412,6 +425,37 @@ public final class VendorTagJsonEditor {
                 "Byte",
                 "1",
                 "1"
+        ));
+
+        return list;
+    }
+
+
+    private static List<VendorTagInfo> getAiSceneryVendorTags(
+            VendorTagRuntimeSettings.Settings settings
+    ) {
+        List<VendorTagInfo> list = new ArrayList<>();
+        String enabledValue = settings.aiSceneryEnabled ? "1" : "0";
+
+        list.add(new VendorTagInfo(
+                TAG_AI_SCENERY_MODE_SUPPORT,
+                "Byte",
+                "1",
+                enabledValue
+        ));
+
+        list.add(new VendorTagInfo(
+                TAG_AI_SCENERY_MODE_HIGH_PIXEL_SUPPORT,
+                "Byte",
+                "1",
+                enabledValue
+        ));
+
+        list.add(new VendorTagInfo(
+                TAG_AI_SCENERY_MODE_DE_HAZY_SWITCH,
+                "Byte",
+                "1",
+                enabledValue
         ));
 
         return list;

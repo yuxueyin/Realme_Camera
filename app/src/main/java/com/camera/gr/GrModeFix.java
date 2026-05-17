@@ -23,10 +23,15 @@ public class GrModeFix {
             "com.oplus.feature.effect.style.support";
 
     private static final String GR_CASE_NAME = "gr_mode_case";
+    private static final String VIBE_CASE_NAME = "vibe_mode_case";
     private static final String GR_FALLBACK_CASE_NAME = "sat_photo_case";
 
     private static final String GR_MODE_NAME = "gr_mode";
+    private static final String GR_SHORT_MODE_NAME = "gr";
+    private static final String VIBE_MODE_NAME = "vibe_mode";
+    private static final String VIBE_SHORT_MODE_NAME = "vibe";
     private static final String PHOTO_MODE_NAME = "photo_mode";
+    private static final String COMMON_MODE_NAME = "common";
 
     private static final String GR_BAD_OPERATION_HEX_UPPER = "80BE";
     private static final String GR_BAD_OPERATION_HEX_LOWER = "80be";
@@ -124,8 +129,9 @@ public class GrModeFix {
         hookSurfacePoolFinalPictureWrapper();
         hookDisableQuickJpegAndFullOutputInAps();
         hookCamera2ImplCreateNewSessionDelayRestore();
+        hookFaceBeautyPhotoChainModeFallback();
 
-        host.xlog(Log.ERROR, "GrModeFix installed package=com.camera.gr v43-landscape-portrait-size-fix");
+        host.xlog(Log.ERROR, "GrModeFix installed package=com.camera.gr v46-vibe-gr-facebeauty-photo-chain");
     }
 
     private void hookAndroidLogForFilterMode() {
@@ -702,6 +708,7 @@ public class GrModeFix {
     private void hookGrCaseStringReturnFallback() {
         String[] classNames = new String[]{
                 "com.oplus.ocs.camera.producer.mode.GRCapMode",
+                "com.oplus.ocs.camera.producer.mode.VibeCapMode",
                 "com.oplus.ocs.camera.producer.mode.BaseMode"
         };
 
@@ -752,7 +759,7 @@ public class GrModeFix {
 
                         if (result instanceof String) {
                             String oldValue = (String) result;
-                            String newValue = fixGrCaseOnly(oldValue);
+                            String newValue = fixPhotoChainTextOnly(oldValue);
 
                             if (!oldValue.equals(newValue)) {
                                 markGrPatchWindow();
@@ -846,7 +853,8 @@ public class GrModeFix {
                         );
                     }
 
-                    if (isGrRelatedObject(thisObject) || containsText(newArgs, GR_CASE_NAME)) {
+                    if (isGrRelatedObject(thisObject) || isVibeRelatedObject(thisObject)
+                            || containsText(newArgs, GR_CASE_NAME) || containsText(newArgs, VIBE_CASE_NAME)) {
                         host.xlog(
                                 Log.ERROR,
                                 "GR_BASEMODE_V42 call method="
@@ -1941,6 +1949,182 @@ public class GrModeFix {
     }
 
 
+    private void hookFaceBeautyPhotoChainModeFallback() {
+        String[] classNames = new String[]{
+                "kb.g",
+                "com.oplus.camera.feature.beauty.model.FaceBeautyModel"
+        };
+
+        for (String className : classNames) {
+            try {
+                Class clazz = host.loadCameraClass(className);
+                Method[] methods = clazz.getDeclaredMethods();
+
+                for (Method method : methods) {
+                    if (Modifier.isAbstract(method.getModifiers())) {
+                        continue;
+                    }
+
+                    method.setAccessible(true);
+
+                    host.hookMethod(method).intercept(chain -> {
+                        List argsList = chain.getArgs();
+                        Object[] newArgs = null;
+                        boolean changed = false;
+
+                        if (argsList != null && !argsList.isEmpty()) {
+                            newArgs = argsList.toArray(new Object[0]);
+                            changed = replaceShortModeInFaceBeautyArgs(
+                                    newArgs,
+                                    "FaceBeautyModel." + method.getName()
+                            );
+                        }
+
+                        try {
+                            if (changed) {
+                                return chain.proceed(newArgs);
+                            }
+                            return chain.proceed();
+                        } catch (Throwable t) {
+                            if (isFaceBeautyPhotoChainModeCrash(t)) {
+                                host.xlog(
+                                        Log.ERROR,
+                                        "VIBE_GR_PHOTO_CHAIN_V46 suppress FaceBeauty mode crash method="
+                                                + method
+                                                + " err="
+                                                + String.valueOf(t)
+                                );
+                                return defaultReturnValue(method.getReturnType());
+                            }
+                            throw t;
+                        }
+                    });
+                }
+
+                host.xlog(Log.ERROR, "hook success: GrModeFix FaceBeautyModel photo-chain fallback v46 -> " + className);
+            } catch (Throwable t) {
+                host.xlog(
+                        Log.ERROR,
+                        "hook GrModeFix FaceBeautyModel photo-chain fallback v46 failed class="
+                                + className
+                                + " err="
+                                + String.valueOf(t)
+                );
+            }
+        }
+    }
+
+    private boolean replaceShortModeInFaceBeautyArgs(Object[] args, String where) {
+        if (args == null || args.length == 0) {
+            return false;
+        }
+
+        boolean changed = false;
+
+        for (int i = 0; i < args.length; i++) {
+            Object arg = args[i];
+
+            if (arg instanceof String) {
+                String oldValue = (String) arg;
+                String newValue = fixFaceBeautyModeOnly(oldValue);
+
+                if (!oldValue.equals(newValue)) {
+                    args[i] = newValue;
+                    changed = true;
+
+                    host.xlog(
+                            Log.ERROR,
+                            "VIBE_GR_PHOTO_CHAIN_V46 replace FaceBeauty arg where="
+                                    + where
+                                    + " index="
+                                    + i
+                                    + " old="
+                                    + oldValue
+                                    + " new="
+                                    + newValue
+                    );
+                }
+            }
+        }
+
+        return changed;
+    }
+
+    private String fixFaceBeautyModeOnly(String value) {
+        if (value == null || value.length() == 0) {
+            return value;
+        }
+
+        if (GR_SHORT_MODE_NAME.equals(value) || VIBE_SHORT_MODE_NAME.equals(value)) {
+            return COMMON_MODE_NAME;
+        }
+
+        if (GR_MODE_NAME.equals(value) || VIBE_MODE_NAME.equals(value)) {
+            return PHOTO_MODE_NAME;
+        }
+
+        String fixed = value;
+        fixed = fixed.replace(GR_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        fixed = fixed.replace(VIBE_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        fixed = fixed.replace(VIBE_MODE_NAME, PHOTO_MODE_NAME);
+        return fixed;
+    }
+
+    private boolean isFaceBeautyPhotoChainModeCrash(Throwable t) {
+        if (t == null) {
+            return false;
+        }
+
+        Throwable current = t;
+        while (current != null) {
+            String message = String.valueOf(current.getMessage());
+            if (message.contains("FaceBeautyKeys")
+                    && (message.contains("mode: vibe") || message.contains("mode: gr"))) {
+                return true;
+            }
+            current = current.getCause();
+        }
+
+        return false;
+    }
+
+    private Object defaultReturnValue(Class returnType) {
+        if (returnType == null || returnType == Void.TYPE) {
+            return null;
+        }
+
+        if (!returnType.isPrimitive()) {
+            return null;
+        }
+
+        if (returnType == Boolean.TYPE) {
+            return false;
+        }
+        if (returnType == Byte.TYPE) {
+            return (byte) 0;
+        }
+        if (returnType == Short.TYPE) {
+            return (short) 0;
+        }
+        if (returnType == Integer.TYPE) {
+            return 0;
+        }
+        if (returnType == Long.TYPE) {
+            return 0L;
+        }
+        if (returnType == Float.TYPE) {
+            return 0f;
+        }
+        if (returnType == Double.TYPE) {
+            return 0d;
+        }
+        if (returnType == Character.TYPE) {
+            return (char) 0;
+        }
+
+        return null;
+    }
+
     private void hookCamera2ImplCreateNewSessionDelayRestore() {
         String className = "com.oplus.ocs.camera.producer.device.Camera2Impl";
 
@@ -1967,6 +2151,7 @@ public class GrModeFix {
 
                     boolean changed = false;
                     boolean isGrSession = false;
+                    boolean isVibeSession = false;
                     boolean isMasterSession = false;
                     List<RestoreRecord> restoreRecords = new ArrayList<>();
 
@@ -1975,15 +2160,28 @@ public class GrModeFix {
                             isMasterSession = true;
                         }
 
-                        if (!isGrRelatedObject(arg)) {
+                        boolean grRelated = isGrRelatedObject(arg);
+                        boolean vibeRelated = isVibeRelatedObject(arg);
+
+                        if (!grRelated && !vibeRelated) {
                             continue;
                         }
 
-                        isGrSession = true;
+                        if (grRelated) {
+                            isGrSession = true;
+                        }
+
+                        if (vibeRelated) {
+                            isVibeSession = true;
+                        }
 
                         host.xlog(
                                 Log.ERROR,
-                                "GR_DELAY_V43 before argClass="
+                                "GR_DELAY_V44 before photo-chain gr="
+                                        + grRelated
+                                        + " vibe="
+                                        + vibeRelated
+                                        + " argClass="
                                         + objectClassName(arg)
                                         + " text="
                                         + safeToString(arg)
@@ -1991,7 +2189,7 @@ public class GrModeFix {
 
                         updateCurrentFullSize(
                                 chooseFullSizeByText(safeToString(arg)),
-                                "Camera2Impl.createNewSession entity"
+                                "Camera2Impl.createNewSession photo-chain entity"
                         );
 
                         changed |= fixCameraSessionEntityDelayRestore(
@@ -2001,7 +2199,7 @@ public class GrModeFix {
 
                         host.xlog(
                                 Log.ERROR,
-                                "GR_DELAY_V42 after changed="
+                                "GR_DELAY_V44 after changed="
                                         + changed
                                         + " text="
                                         + safeToString(arg)
@@ -2010,7 +2208,7 @@ public class GrModeFix {
 
                     if (isMasterSession) {
 
-                    } else if (isGrSession) {
+                    } else if (isGrSession || isVibeSession) {
                         markGrPatchWindow();
 
                     }
@@ -2018,10 +2216,10 @@ public class GrModeFix {
                     if (!restoreRecords.isEmpty()) {
                         scheduleDelayedRestore(restoreRecords);
                     } else {
-                        host.xlog(Log.ERROR, "GR_DELAY_V42 no restore records");
+                        host.xlog(Log.ERROR, "GR_DELAY_V44 no restore records");
                     }
 
-                    if (isGrSession) {
+                    if (isGrSession || isVibeSession) {
                         grCreateSessionActive.set(true);
                     }
 
@@ -2032,7 +2230,7 @@ public class GrModeFix {
 
                         return chain.proceed();
                     } finally {
-                        if (isGrSession) {
+                        if (isGrSession || isVibeSession) {
                             grCreateSessionActive.set(false);
                         }
                     }
@@ -2106,7 +2304,7 @@ public class GrModeFix {
 
                     if (value instanceof String) {
                         String oldValue = (String) value;
-                        String newValue = fixGrCaseOnly(oldValue);
+                        String newValue = fixPhotoChainTextOnly(oldValue);
 
                         if (!oldValue.equals(newValue)) {
                             field.set(object, newValue);
@@ -2196,25 +2394,27 @@ public class GrModeFix {
 
                     String oldValue = (String) value;
 
-                    if (!GR_MODE_NAME.equals(oldValue)) {
+                    String mappedValue = mapPhotoChainModeName(oldValue);
+
+                    if (oldValue.equals(mappedValue)) {
                         continue;
                     }
 
                     restoreRecords.add(new RestoreRecord(object, field, oldValue, label));
 
-                    field.set(object, PHOTO_MODE_NAME);
+                    field.set(object, mappedValue);
                     changed = true;
 
                     host.xlog(
                             Log.ERROR,
-                            "GR_DELAY_V42 set modeName TEMP label="
+                            "GR_DELAY_V45 set modeName TEMP label="
                                     + label
                                     + " class="
                                     + clazz.getName()
                                     + " old="
                                     + oldValue
                                     + " new="
-                                    + PHOTO_MODE_NAME
+                                    + mappedValue
                     );
                 } catch (Throwable ignored) {
                 }
@@ -2270,7 +2470,8 @@ public class GrModeFix {
 
                 Object current = record.field.get(record.object);
 
-                if (current instanceof String && PHOTO_MODE_NAME.equals(current)) {
+                if (current instanceof String
+                        && (PHOTO_MODE_NAME.equals(current) || COMMON_MODE_NAME.equals(current))) {
                     record.field.set(record.object, record.oldValue);
 
                     host.xlog(
@@ -2362,7 +2563,7 @@ public class GrModeFix {
 
             if (arg instanceof String) {
                 String oldValue = (String) arg;
-                String newValue = fixGrCaseOnly(oldValue);
+                String newValue = fixPhotoChainTextOnly(oldValue);
 
                 if (!oldValue.equals(newValue)) {
                     args[i] = newValue;
@@ -2386,12 +2587,47 @@ public class GrModeFix {
         return changed;
     }
 
-    private String fixGrCaseOnly(String value) {
+    private String fixPhotoChainTextOnly(String value) {
         if (value == null || value.length() == 0) {
             return value;
         }
 
-        return value.replace(GR_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        String fixed = fixPhotoChainCaseOnly(value);
+
+        fixed = fixed.replace(VIBE_MODE_NAME, PHOTO_MODE_NAME);
+
+        if (VIBE_SHORT_MODE_NAME.equals(fixed)) {
+            return COMMON_MODE_NAME;
+        }
+
+        return fixed;
+    }
+
+    private String mapPhotoChainModeName(String value) {
+        if (value == null || value.length() == 0) {
+            return value;
+        }
+
+        if (GR_MODE_NAME.equals(value) || VIBE_MODE_NAME.equals(value)) {
+            return PHOTO_MODE_NAME;
+        }
+
+        if (VIBE_SHORT_MODE_NAME.equals(value)) {
+            return COMMON_MODE_NAME;
+        }
+
+        return value;
+    }
+
+    private String fixPhotoChainCaseOnly(String value) {
+        if (value == null || value.length() == 0) {
+            return value;
+        }
+
+        String fixed = value;
+        fixed = fixed.replace(GR_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        fixed = fixed.replace(VIBE_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        return fixed;
     }
 
     private String replaceOperationHexOnly(String value) {
@@ -2440,6 +2676,39 @@ public class GrModeFix {
                 || lower.contains("moperationmode: 80be")
                 || lower.contains("moperationmode='80BE'")
                 || lower.contains("moperationmode: 80BE");
+    }
+
+    private boolean isVibeRelatedObject(Object object) {
+        if (object == null) {
+            return false;
+        }
+
+        String className = object.getClass().getName();
+
+        if (className != null) {
+            String lowerClass = className.toLowerCase(Locale.ROOT);
+
+            if (lowerClass.contains("vibecapmode")
+                    || lowerClass.contains("vibe")) {
+                return true;
+            }
+        }
+
+        String text = safeToString(object);
+
+        if (text == null) {
+            return false;
+        }
+
+        String lower = text.toLowerCase(Locale.ROOT);
+
+        return lower.contains("vibecapmode")
+                || lower.contains(VIBE_MODE_NAME)
+                || lower.contains(VIBE_CASE_NAME)
+                || lower.contains("mode: vibe")
+                || lower.contains("modename：vibe")
+                || lower.contains("modename: vibe")
+                || lower.contains("vibe_photo");
     }
 
     private boolean isMasterRelatedObject(Object object) {

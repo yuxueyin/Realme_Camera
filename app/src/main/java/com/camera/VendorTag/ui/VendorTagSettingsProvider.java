@@ -18,6 +18,7 @@ public final class VendorTagSettingsProvider extends ContentProvider {
 
     public static final String COLUMN_GR_ENABLED = "gr_enabled";
     public static final String COLUMN_VIBE_ENABLED = "vibe_enabled";
+    public static final String COLUMN_AI_SCENERY_ENABLED = "ai_scenery_enabled";
 
     public static final String COLUMN_AVAILABLE_ZOOM_VALUES = "available_zoom_values";
     public static final String COLUMN_AVAILABLE_ZOOM_COUNT = "available_zoom_count";
@@ -57,6 +58,7 @@ public final class VendorTagSettingsProvider extends ContentProvider {
         MatrixCursor cursor = new MatrixCursor(new String[]{
                 COLUMN_GR_ENABLED,
                 COLUMN_VIBE_ENABLED,
+                COLUMN_AI_SCENERY_ENABLED,
                 COLUMN_AVAILABLE_ZOOM_VALUES,
                 COLUMN_AVAILABLE_ZOOM_COUNT,
                 COLUMN_MARKED_ZOOM_VALUES,
@@ -65,6 +67,7 @@ public final class VendorTagSettingsProvider extends ContentProvider {
 
         boolean grEnabled = VendorTagSettings.isGrEnabled(getContext());
         boolean vibeEnabled = VendorTagSettings.isVibeEnabled(getContext());
+        boolean aiSceneryEnabled = VendorTagSettings.isAiSceneryEnabled(getContext());
 
         String availableZoom = VendorTagSettings.getAvailableZoomValues(getContext());
         int availableCount = VendorTagSettings.getAvailableZoomCount(getContext());
@@ -75,6 +78,7 @@ public final class VendorTagSettingsProvider extends ContentProvider {
         cursor.addRow(new Object[]{
                 grEnabled ? "1" : "0",
                 vibeEnabled ? "1" : "0",
+                aiSceneryEnabled ? "1" : "0",
                 availableZoom,
                 String.valueOf(availableCount),
                 markedZoom,

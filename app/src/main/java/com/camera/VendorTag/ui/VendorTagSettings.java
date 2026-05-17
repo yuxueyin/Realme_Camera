@@ -9,6 +9,7 @@ public final class VendorTagSettings {
 
     public static final String KEY_GR_ENABLED = "gr_enabled";
     public static final String KEY_VIBE_ENABLED = "vibe_enabled";
+    public static final String KEY_AI_SCENERY_ENABLED = "ai_scenery_enabled";
 
     public static final String KEY_AVAILABLE_ZOOM_VALUES = "available_zoom_values";
     public static final String KEY_MARKED_ZOOM_VALUES = "marked_zoom_values";
@@ -18,6 +19,7 @@ public final class VendorTagSettings {
 
     public static final boolean DEFAULT_GR_ENABLED = true;
     public static final boolean DEFAULT_VIBE_ENABLED = false;
+    public static final boolean DEFAULT_AI_SCENERY_ENABLED = true;
 
     public static final String DEFAULT_AVAILABLE_ZOOM_VALUES =
             "1.26(28),1.575(35),2.0(40),2.50(50)";
@@ -37,6 +39,10 @@ public final class VendorTagSettings {
 
     public static boolean isVibeEnabled(Context context) {
         return getPrefs(context).getBoolean(KEY_VIBE_ENABLED, DEFAULT_VIBE_ENABLED);
+    }
+
+    public static boolean isAiSceneryEnabled(Context context) {
+        return getPrefs(context).getBoolean(KEY_AI_SCENERY_ENABLED, DEFAULT_AI_SCENERY_ENABLED);
     }
 
     public static String getAvailableZoomValues(Context context) {
@@ -75,10 +81,18 @@ public final class VendorTagSettings {
                 .apply();
     }
 
+    public static void saveAiSceneryEnabled(Context context, boolean enabled) {
+        getPrefs(context)
+                .edit()
+                .putBoolean(KEY_AI_SCENERY_ENABLED, enabled)
+                .apply();
+    }
+
     public static void save(
             Context context,
             boolean grEnabled,
             boolean vibeEnabled,
+            boolean aiSceneryEnabled,
             String availableZoomValues,
             String markedZoomValues
     ) {
@@ -86,6 +100,7 @@ public final class VendorTagSettings {
                 .edit()
                 .putBoolean(KEY_GR_ENABLED, grEnabled)
                 .putBoolean(KEY_VIBE_ENABLED, vibeEnabled)
+                .putBoolean(KEY_AI_SCENERY_ENABLED, aiSceneryEnabled)
                 .putString(KEY_AVAILABLE_ZOOM_VALUES, safeTrim(availableZoomValues))
                 .putString(KEY_MARKED_ZOOM_VALUES, safeTrim(markedZoomValues))
                 .apply();
@@ -96,6 +111,7 @@ public final class VendorTagSettings {
                 context,
                 DEFAULT_GR_ENABLED,
                 DEFAULT_VIBE_ENABLED,
+                DEFAULT_AI_SCENERY_ENABLED,
                 DEFAULT_AVAILABLE_ZOOM_VALUES,
                 DEFAULT_MARKED_ZOOM_VALUES
         );

@@ -155,6 +155,8 @@ private class Material3Controller(activity: Activity) {
         private set
     var vibeEnabled by mutableStateOf(false)
         private set
+    var aiSceneryEnabled by mutableStateOf(false)
+        private set
     var rootActive by mutableStateOf(false)
         private set
     var lspActive by mutableStateOf(false)
@@ -191,12 +193,13 @@ private class Material3Controller(activity: Activity) {
         get() = activeDialog != null || page == LumoPage.ModuleLog
 
     val featureCount: Int
-        get() = listOf(grEnabled, vibeEnabled).count { it }
+        get() = listOf(grEnabled, vibeEnabled, aiSceneryEnabled).count { it }
 
     fun refreshAll() {
         val activity = activityRef.get() ?: return
         grEnabled = VendorTagSettings.isGrEnabled(activity)
         vibeEnabled = VendorTagSettings.isVibeEnabled(activity)
+        aiSceneryEnabled = VendorTagSettings.isAiSceneryEnabled(activity)
         lspActive = VendorTagSettings.isLspActive(activity)
         moduleVersion = getSelfVersionName(activity)
         deviceModel = getDeviceModelByOplusMarketName()
@@ -256,6 +259,13 @@ private class Material3Controller(activity: Activity) {
         vibeEnabled = !vibeEnabled
         saveSettings(activity)
         toast(activity, if (vibeEnabled) "已开启影调：Neo8 专属功能" else "已关闭影调")
+    }
+
+    fun toggleAiScenery() {
+        val activity = activityRef.get() ?: return
+        aiSceneryEnabled = !aiSceneryEnabled
+        saveSettings(activity)
+        toast(activity, if (aiSceneryEnabled) "已开启真我专属AI风光" else "已关闭AI风光")
     }
 
     fun restartCamera() {
@@ -353,6 +363,7 @@ private class Material3Controller(activity: Activity) {
             activity,
             grEnabled,
             vibeEnabled,
+            aiSceneryEnabled,
             VendorTagSettings.DEFAULT_AVAILABLE_ZOOM_VALUES,
             VendorTagSettings.DEFAULT_MARKED_ZOOM_VALUES
         )
@@ -614,6 +625,15 @@ private fun LazyListScope.cameraPage(controller: Material3Controller) {
             body = "开启Neo8专属功能\n注意：会和自带的大师模式冲突，大师模式会变成长按相机启动",
             checked = controller.vibeEnabled,
             onClick = controller::toggleVibe
+        )
+    }
+
+    item {
+        Material3SwitchCard(
+            title = "AI风光",
+            body = "开启真我专属AI风光",
+            checked = controller.aiSceneryEnabled,
+            onClick = controller::toggleAiScenery
         )
     }
 }

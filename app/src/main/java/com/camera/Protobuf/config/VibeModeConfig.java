@@ -80,7 +80,14 @@ public final class VibeModeConfig implements ProtobufConfig {
              *
              * 但不能把 vibe_photo / filter / scale.focus / ISO / 曝光 / 闪光灯等全部删掉。
              */
+            /*
+             * Vibe 拍照要跟 photo 链路一致，不能从 professional/master 模板创建。
+             * 先强制用 photo_mode 克隆 vibe_mode，再删 HDR 路由冲突项，最后补 Vibe 专属 feature。
+             */
+            changed |= editor.replaceModeFromTemplate(MODE_NAME, "photo_mode");
+
             changed |= removeDangerHdrFeatures(editor);
+            changed |= removeBeautyFeatures(editor);
 
             List<FeatureInfo> features = createVibeNoHdrFeatureList();
 
@@ -132,6 +139,26 @@ public final class VibeModeConfig implements ProtobufConfig {
             return changed;
         } catch (Throwable t) {
             log("VibeModeConfig remove danger HDR features failed " + t);
+            return false;
+        }
+    }
+
+    private boolean removeBeautyFeatures(ProtobufEditor editor) {
+        try {
+            List<String> keywords = new ArrayList<>();
+
+            keywords.add("com.oplus.camera.feature.beauty");
+            keywords.add("FaceBeauty");
+            keywords.add("facebeauty");
+            keywords.add("beauty");
+
+            boolean changed = editor.removeFeaturesByKeywordFromMode(MODE_NAME, keywords);
+
+            log("VibeModeConfig remove beauty features for photo chain changed=" + changed);
+
+            return changed;
+        } catch (Throwable t) {
+            log("VibeModeConfig remove beauty features failed " + t);
             return false;
         }
     }

@@ -77,7 +77,7 @@ public final class CameraUnitJsonObjectPatcher {
             );
 
             changed |= patchGrMode(root, host);
-            changed |= patchVibeModeRearMainOnlyV3(root, host);
+            changed |= patchVibeModePhotoChain(root, host);
 
             verify(root, host);
 
@@ -106,23 +106,34 @@ public final class CameraUnitJsonObjectPatcher {
         return changed;
     }
 
-    private static boolean patchVibeModeRearMainOnlyV3(JSONObject root, Object host) {
+    private static boolean patchVibeModePhotoChain(JSONObject root, Object host) {
         boolean changed = false;
 
-        changed |= removeModeFromCameraType(root, "rear_wide", MODE_VIBE, host);
+        /*
+         * Vibe 不能再走之前的 rear_main-only 精简链路。
+         * 之前会把 capture_stream_number 删除，并把 vibe_mode_case 缩成 preview/capture_yuv，
+         * 导致进入 Vibe 后可以预览但拍照链路缺 capture_meta/raw_output/raw10_dol。
+         *
+         * 这里改成和 GR 一样走 photo/sat 拍照链路：
+         * - 四个后摄类型都保留 vibe_mode；
+         * - operation 走 8001 photo 安全链路；
+         * - vibe_mode_case 恢复 capture_meta/raw_output/capture_raw10_dol；
+         * - capture_stream_number 保留 2dol=2。
+         */
+        changed |= addModeToCameraType(root, "rear_wide", MODE_VIBE, host);
         changed |= addModeToCameraType(root, "rear_main", MODE_VIBE, host);
-        changed |= removeModeFromCameraType(root, "rear_tele", MODE_VIBE, host);
-        changed |= removeModeFromCameraType(root, "rear_sat", MODE_VIBE, host);
+        changed |= addModeToCameraType(root, "rear_tele", MODE_VIBE, host);
+        changed |= addModeToCameraType(root, "rear_sat", MODE_VIBE, host);
 
         changed |= putModeOperation(root, MODE_VIBE, OPERATION_VIBE_SAFE, host);
 
-        changed |= replaceUsecase(root, "vibe_mode_case", createVibeRearMainOnlyCase(), host);
+        changed |= replaceUsecase(root, "vibe_mode_case", createVibePhotoChainCase(), host);
 
-        changed |= removeCaptureStreamNumber(root, MODE_VIBE, host);
+        changed |= putCaptureStreamNumber(root, MODE_VIBE, true, true, true, true, host);
 
         changed |= patchRearMainCustomInfo(root, host);
 
-        log(host, "CameraUnitJsonObjectPatcher VIBE_REAR_MAIN_ONLY_V3 applied changed=" + changed);
+        log(host, "CameraUnitJsonObjectPatcher VIBE_PHOTO_CHAIN applied changed=" + changed);
 
         return changed;
     }
@@ -720,11 +731,14 @@ public final class CameraUnitJsonObjectPatcher {
         return array;
     }
 
-    private static JSONArray createVibeRearMainOnlyCase() {
+    private static JSONArray createVibePhotoChainCase() {
         JSONArray array = new JSONArray();
 
-        putPair(array, "preview", "rear_main");
+        putPair(array, "capture_meta", "rear_sat");
+        putPair(array, "preview", "rear_sat");
+        putPair(array, "raw_output", "rear_sat");
         putPair(array, "capture_yuv", "rear_main");
+        putPair(array, "capture_raw10_dol", "rear_sat");
 
         return array;
     }
@@ -852,7 +866,10 @@ public final class CameraUnitJsonObjectPatcher {
 
         boolean vibeOperation = hasModeOperation(root, MODE_VIBE, OPERATION_VIBE_SAFE);
         boolean vibeUsecase = hasUsecase(root, "vibe_mode_case");
-        boolean vibeHasCaptureStream = hasCaptureStreamMode(root, MODE_VIBE);
+        boolean vibeHasCaptureStream = hasCaptureStream(root, MODE_VIBE, "rear_main")
+                && hasCaptureStream(root, MODE_VIBE, "rear_wide")
+                && hasCaptureStream(root, MODE_VIBE, "rear_tele")
+                && hasCaptureStream(root, MODE_VIBE, "rear_sat");
 
         boolean vibeRearWide = hasModeInCameraType(root, "rear_wide", MODE_VIBE);
         boolean vibeRearMain = hasModeInCameraType(root, "rear_main", MODE_VIBE);
@@ -875,7 +892,7 @@ public final class CameraUnitJsonObjectPatcher {
 
         log(
                 host,
-                "CameraUnitJsonObjectPatcher verify VIBE_REAR_MAIN_ONLY_V3"
+                "CameraUnitJsonObjectPatcher verify VIBE_PHOTO_CHAIN"
                         + " operation8001=" + vibeOperation
                         + " usecase=" + vibeUsecase
                         + " hasCaptureStream=" + vibeHasCaptureStream

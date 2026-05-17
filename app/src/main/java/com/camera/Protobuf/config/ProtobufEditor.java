@@ -53,6 +53,67 @@ public final class ProtobufEditor {
         return addFeaturesInternal(modeName, cameraTypeKey, features, true, true);
     }
 
+    public boolean replaceModeFromTemplate(String targetModeName, String templateModeName) {
+        if (targetModeName == null || targetModeName.length() == 0
+                || templateModeName == null || templateModeName.length() == 0) {
+            return false;
+        }
+
+        try {
+            Object cameraFeatureTableBuilder =
+                    callMethod(featureTableBuilder, "getCameraFeatureTableBuilder");
+
+            Object modeMapObject =
+                    callMethod(cameraFeatureTableBuilder, "getMutableModeFeatureTables");
+
+            if (!(modeMapObject instanceof Map)) {
+                host.xlog(Log.ERROR, "ProtobufEditor replaceMode modeFeatureTables is not Map");
+                return false;
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<Object, Object> modeFeatureTablesMap = (Map<Object, Object>) modeMapObject;
+
+            Object templateModeTable = modeFeatureTablesMap.get(templateModeName);
+
+            if (templateModeTable == null) {
+                host.xlog(
+                        Log.ERROR,
+                        "ProtobufEditor replaceMode template missing target="
+                                + targetModeName
+                                + " template="
+                                + templateModeName
+                );
+                return false;
+            }
+
+            Object templateBuilder = callMethod(templateModeTable, "toBuilder");
+            Object newModeTable = callMethod(templateBuilder, "build");
+
+            modeFeatureTablesMap.put(targetModeName, newModeTable);
+
+            host.xlog(
+                    Log.ERROR,
+                    "ProtobufEditor replace mode from template target="
+                            + targetModeName
+                            + " template="
+                            + templateModeName
+            );
+
+            return true;
+        } catch (Throwable t) {
+            host.xlog(
+                    Log.ERROR,
+                    "ProtobufEditor replaceModeFromTemplate failed target="
+                            + targetModeName
+                            + " template="
+                            + templateModeName,
+                    t
+            );
+            return false;
+        }
+    }
+
     public boolean addFeatures(
             String modeName,
             int cameraTypeKey,
@@ -330,11 +391,11 @@ public final class ProtobufEditor {
             int cameraTypeKey
     ) {
         String[] preferredModes = new String[]{
+                "photo_mode",
+                "common",
                 "professional_mode",
                 "xpan_mode",
                 "master_mode",
-                "photo_mode",
-                "common",
                 "portrait_mode",
                 "night_mode"
         };
@@ -403,11 +464,11 @@ public final class ProtobufEditor {
 
     private Object findSafeTemplateModeTable(Map<Object, Object> modeFeatureTablesMap) {
         String[] preferredModes = new String[]{
+                "photo_mode",
+                "common",
                 "professional_mode",
                 "xpan_mode",
                 "master_mode",
-                "photo_mode",
-                "common",
                 "portrait_mode",
                 "night_mode"
         };
