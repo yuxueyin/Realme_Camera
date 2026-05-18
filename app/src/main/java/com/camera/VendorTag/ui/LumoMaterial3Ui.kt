@@ -2,7 +2,9 @@ package com.camera.VendorTag.ui
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageInfo
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -12,6 +14,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -68,6 +71,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -119,7 +123,10 @@ private enum class LumoPage(
     Camera("相机设置", "", "相机", R.drawable.ic_nav_camera),
     Album("相册设置", "", "相册", R.drawable.ic_nav_album),
     Module("模块设置", "", "模块", R.drawable.ic_nav_module),
-    ModuleLog("日志功能", "抓取 Hook 与相机运行日志", "日志", R.drawable.ic_nav_module)
+    ModuleLog("日志功能", "抓取 Hook 与相机运行日志", "日志", R.drawable.ic_nav_module),
+    ModuleAbout("关于", "", "关于", R.drawable.ic_nav_module),
+    ModuleTools("相机维护", "", "维护", R.drawable.ic_nav_module),
+    ModuleDonate("捐款", "", "捐款", R.drawable.ic_nav_module)
 }
 
 private enum class UiThemeMode(
@@ -190,7 +197,7 @@ private class Material3Controller(activity: Activity) {
         get() = themeMode.label
 
     val canConsumeBack: Boolean
-        get() = activeDialog != null || page == LumoPage.ModuleLog
+        get() = activeDialog != null || page == LumoPage.ModuleLog || page == LumoPage.ModuleAbout || page == LumoPage.ModuleTools || page == LumoPage.ModuleDonate
 
     val featureCount: Int
         get() = listOf(grEnabled, vibeEnabled, aiSceneryEnabled).count { it }
@@ -226,7 +233,11 @@ private class Material3Controller(activity: Activity) {
             activeDialog = null
             return true
         }
-        if (page == LumoPage.ModuleLog) {
+        if (page == LumoPage.ModuleDonate) {
+            page = LumoPage.ModuleAbout
+            return true
+        }
+        if (page == LumoPage.ModuleLog || page == LumoPage.ModuleAbout || page == LumoPage.ModuleTools) {
             page = LumoPage.Module
             return true
         }
@@ -245,6 +256,16 @@ private class Material3Controller(activity: Activity) {
         val activity = activityRef.get() ?: return
         themeMode = mode
         saveUiPreferences(activity)
+    }
+
+    fun openUrl(url: String) {
+        val activity = activityRef.get() ?: return
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            activity.startActivity(intent)
+        } catch (_: Throwable) {
+            toast(activity, "无法打开链接")
+        }
     }
 
     fun toggleGr() {
@@ -268,15 +289,28 @@ private class Material3Controller(activity: Activity) {
         toast(activity, if (aiSceneryEnabled) "已开启真我专属AI风光" else "已关闭AI风光")
     }
 
-    fun restartCamera() {
+    fun cleanCameraData() {
         val activity = activityRef.get() ?: return
         busy = true
-        toast(activity, "正在强制停止相机、清理数据并重启")
+        toast(activity, "正在清理相机数据")
         Thread {
             val result = CameraAppCleaner.clearCameraDataAndForceStopCamera()
             activity.runOnUiThread {
                 busy = false
-                toast(activity, if (result.success) "相机数据已清理并重新启动" else "处理失败，请检查 Root 权限")
+                toast(activity, if (result.success) "相机数据已清理并重启" else "清理失败，请检查 Root 权限")
+            }
+        }.start()
+    }
+
+    fun dex2oatHookOnly() {
+        val activity = activityRef.get() ?: return
+        busy = true
+        toast(activity, "正在优化相机")
+        Thread {
+            val result = CameraAppCleaner.dex2oatHookOnly()
+            activity.runOnUiThread {
+                busy = false
+                toast(activity, if (result.success) "相机优化完成" else "优化失败，请检查 Root 权限")
             }
         }.start()
     }
@@ -462,6 +496,17 @@ private fun LumoScaffold(controller: Material3Controller) {
             .windowInsetsPadding(WindowInsets.statusBars),
         topBar = {
             CenterAlignedTopAppBar(
+                navigationIcon = {
+                    if (controller.page == LumoPage.ModuleLog || controller.page == LumoPage.ModuleAbout || controller.page == LumoPage.ModuleTools || controller.page == LumoPage.ModuleDonate) {
+                        TextButton(onClick = { controller.handleBack() }) {
+                            Text(
+                                text = "←",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                },
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
@@ -497,7 +542,7 @@ private fun LumoScaffold(controller: Material3Controller) {
                 ) {
                     navPages.forEach { item ->
                         val selected = when (item) {
-                            LumoPage.Module -> controller.page == LumoPage.Module || controller.page == LumoPage.ModuleLog
+                            LumoPage.Module -> controller.page == LumoPage.Module || controller.page == LumoPage.ModuleLog || controller.page == LumoPage.ModuleAbout || controller.page == LumoPage.ModuleTools || controller.page == LumoPage.ModuleDonate
                             else -> controller.page == item
                         }
                         NavigationBarItem(
@@ -542,6 +587,9 @@ private fun LumoScaffold(controller: Material3Controller) {
                     LumoPage.Album -> albumPage()
                     LumoPage.Module -> modulePage(controller)
                     LumoPage.ModuleLog -> moduleLogPage(controller)
+                    LumoPage.ModuleAbout -> moduleAboutPage(controller)
+                    LumoPage.ModuleTools -> moduleToolsPage(controller)
+                    LumoPage.ModuleDonate -> moduleDonatePage(controller)
                 }
             }
         }
@@ -601,6 +649,15 @@ private fun LazyListScope.homePage(controller: Material3Controller) {
                 InfoRow("系统版本", controller.systemVersion),
                 InfoRow("相机版本", controller.cameraVersion)
             )
+        )
+    }
+
+    item {
+        HomeContactCard(
+            title = "交流反馈",
+            body = "QQ群：1050091911",
+            iconText = "QQ",
+            onClick = { controller.openUrl(QQ_GROUP_URL) }
         )
     }
 }
@@ -773,16 +830,26 @@ private fun LazyListScope.modulePage(controller: Material3Controller) {
             title = "主题模式",
             subtitle = "Google Material 3",
             value = controller.themeModeLabel,
-            iconText = "◌",
+            iconText = "◐",
             onClick = controller::showThemeDialog
         )
     }
 
     item {
         Material3ActionCard(
+            title = "关于真我相机补全",
+            body = "查看源代码、更新入口与项目信息。",
+            iconText = "◎",
+            enabled = true,
+            onClick = { controller.showPage(LumoPage.ModuleAbout) }
+        )
+    }
+
+    item {
+        Material3ActionCard(
             title = "日志功能",
-            body = "清理相机数据、重启相机并抓取 Hook 日志，用于排查功能未生效问题。",
-            buttonText = "进入日志页面",
+            body = "抓取 Hook 日志，用于排查功能未生效问题。",
+            iconText = "≡",
             enabled = true,
             onClick = { controller.showPage(LumoPage.ModuleLog) }
         )
@@ -790,12 +857,339 @@ private fun LazyListScope.modulePage(controller: Material3Controller) {
 
     item {
         Material3ActionCard(
-            title = "重启相机",
-            body = "修改配置后建议重启相机，让新的配置和 Hook 状态即时生效。",
-            buttonText = if (controller.busy) "处理中…" else "清理并重启相机",
+            title = "相机维护",
+            body = "清理相机数据与优化相机。",
+            iconText = "↻",
             enabled = !controller.busy,
-            onClick = controller::restartCamera
+            onClick = { controller.showPage(LumoPage.ModuleTools) }
         )
+    }
+}
+
+
+private fun LazyListScope.moduleToolsPage(controller: Material3Controller) {
+    item {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text("相机维护", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+
+    item {
+        ModuleToolActionCard(
+            title = "清理相机数据",
+            body = "清理相机数据后并重启",
+            iconText = "⌫",
+            enabled = !controller.busy,
+            onClick = controller::cleanCameraData
+        )
+    }
+
+    item {
+        ModuleToolActionCard(
+            title = "优化相机",
+            body = "进行dex2oat",
+            iconText = "⚙",
+            enabled = !controller.busy,
+            onClick = controller::dex2oatHookOnly
+        )
+    }
+}
+
+@Composable
+private fun ModuleToolActionCard(
+    title: String,
+    body: String,
+    iconText: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    ElevatedCard(
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = iconText,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                if (body.isNotBlank()) {
+                    Text(
+                        body,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Text(
+                text = if (enabled) "›" else "…",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+
+private fun LazyListScope.moduleAboutPage(controller: Material3Controller) {
+    item {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_lumo_camera),
+                    contentDescription = null,
+                    modifier = Modifier.size(58.dp),
+                    tint = Color.Unspecified
+                )
+                Text(
+                    text = "真我相机补全",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "版本 ${controller.moduleVersion}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+
+    item {
+        Text(
+            text = "关于",
+            modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 2.dp),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+    }
+
+    item {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                AboutActionRow(
+                    iconText = "</>",
+                    title = "查看源代码",
+                    subtitle = "在 GitHub 上查看源代码",
+                    onClick = { controller.openUrl(SOURCE_CODE_URL) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                AboutActionRow(
+                    iconText = "¥",
+                    title = "捐款",
+                    subtitle = "查看捐款二维码",
+                    onClick = { controller.showPage(LumoPage.ModuleDonate) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                AboutActionRow(
+                    iconText = "↓",
+                    title = "获取更新",
+                    subtitle = "检查软件更新和新功能",
+                    onClick = { controller.openUrl(RELEASES_URL) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AboutActionRow(
+    iconText: String,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = iconText,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                subtitle,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(
+            text = "›",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun HomeContactCard(
+    title: String,
+    body: String,
+    iconText: String,
+    onClick: () -> Unit
+) {
+    ElevatedCard(
+        onClick = onClick,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    iconText,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    body,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Text(
+                text = "›",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+private fun LazyListScope.moduleDonatePage(controller: Material3Controller) {
+    item {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "捐款",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    text = "感谢支持真我相机补全",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+
+    item {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.juankuan),
+                contentDescription = "捐款二维码",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                contentScale = ContentScale.FillWidth
+            )
+        }
     }
 }
 
@@ -1130,46 +1524,59 @@ private fun Material3SwitchCard(
 private fun Material3ActionCard(
     title: String,
     body: String,
-    buttonText: String,
+    iconText: String,
     enabled: Boolean,
     onClick: () -> Unit
 ) {
     ElevatedCard(
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         shape = RoundedCornerShape(24.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onClick() }
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("✓", color = MaterialTheme.colorScheme.onSecondaryContainer, fontWeight = FontWeight.Bold)
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-            FilledTonalButton(
-                enabled = enabled,
-                onClick = onClick,
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Text(buttonText)
+                Text(iconText, color = MaterialTheme.colorScheme.onSecondaryContainer, fontWeight = FontWeight.Bold)
             }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    body,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Text(
+                text = if (enabled) "›" else "…",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
 
 private const val UI_PREFS_NAME = "lumo_ui_prefs"
 private const val KEY_THEME_MODE = "theme_mode"
+private const val SOURCE_CODE_URL = "https://github.com/yuxueyin/Realme_Camera"
+private const val RELEASES_URL = "https://github.com/yuxueyin/Realme_Camera/releases"
+private const val QQ_GROUP_URL = "https://qun.qq.com/universal-share/share?ac=1&authKey=mvxJFRWhXVjkBvdGjsBWIev3FI0blPOVTZCBq1fmL8TMTPOqurb%2FmO8O4Wp36T3Q&busi_data=eyJncm91cENvZGUiOiIxMDUwMDkxOTExIiwidG9rZW4iOiJ4UGVPb0c5MEdHTDE4bVVNMTNVNml0SDBKdHp3T3FLNzdmZENib0NrU0pMdDlHZjJQRGo0WHh6azlvRzB6YWZUIiwidWluIjoiMTQxMDQ4NDE2OCJ9&data=VZmsLhW9SwDKZMLd0S9aJfRTwpm_ArfcUzRT0MIKPzs1r1oIOC-CncLzBK9V8JOksT8bchCU607ZcKPibSOGaA&svctype=4&tempid=h5_group_info"
+
 
 private fun getSelfVersionName(context: Context): String {
     return try {

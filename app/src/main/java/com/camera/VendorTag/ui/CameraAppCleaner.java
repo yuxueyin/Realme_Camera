@@ -13,6 +13,7 @@ import java.io.OutputStreamWriter;
 public final class CameraAppCleaner {
 
     private static final String CAMERA_PACKAGE = "com.oplus.camera";
+    private static final String HOOK_PACKAGE = "com.min.lite";
 
     private CameraAppCleaner() {
     }
@@ -24,6 +25,77 @@ public final class CameraAppCleaner {
         String command =
                 "PKG='" + CAMERA_PACKAGE + "'\n"
                         + "am force-stop --user 0 $PKG 2>/dev/null || am force-stop $PKG 2>/dev/null || cmd activity force-stop $PKG\n";
+
+        return runSuCommand(command);
+    }
+
+    /**
+     * 强制停止相机后重新启动相机，不清理相机数据。
+     */
+    public static Result restartCameraOnly() {
+        String command =
+                "PKG='" + CAMERA_PACKAGE + "'\n"
+                        + "run_cmd() {\n"
+                        + "  CMD=\"$1\"\n"
+                        + "  echo '$ ' \"$CMD\"\n"
+                        + "  sh -c \"$CMD\"\n"
+                        + "  CODE=$?\n"
+                        + "  echo 'exitCode='\"$CODE\"\n"
+                        + "  return $CODE\n"
+                        + "}\n"
+                        + "force_stop_camera() {\n"
+                        + "  run_cmd \"am force-stop --user 0 $PKG\"\n"
+                        + "  CODE=$?\n"
+                        + "  if [ $CODE -ne 0 ]; then run_cmd \"am force-stop $PKG\"; CODE=$?; fi\n"
+                        + "  if [ $CODE -ne 0 ]; then run_cmd \"cmd activity force-stop $PKG\"; CODE=$?; fi\n"
+                        + "  return $CODE\n"
+                        + "}\n"
+                        + "start_camera() {\n"
+                        + "  START_CODE=1\n"
+                        + "  LAUNCH=$(cmd package resolve-activity --brief $PKG 2>/dev/null | tail -n 1)\n"
+                        + "  if echo \"$LAUNCH\" | grep -q '/'; then\n"
+                        + "    run_cmd \"am start -n $LAUNCH\"\n"
+                        + "    START_CODE=$?\n"
+                        + "  fi\n"
+                        + "  if [ $START_CODE -ne 0 ]; then\n"
+                        + "    run_cmd \"monkey -p $PKG -c android.intent.category.LAUNCHER 1\"\n"
+                        + "    START_CODE=$?\n"
+                        + "  fi\n"
+                        + "  return $START_CODE\n"
+                        + "}\n"
+                        + "force_stop_camera || exit 11\n"
+                        + "sleep 1\n"
+                        + "start_camera || true\n"
+                        + "echo '__CAMERA_RESTART_DONE__'\n"
+                        + "exit 0\n";
+
+        return runSuCommand(command);
+    }
+
+    /**
+     * 只对 Hook 模块包执行 dex2oat，不处理相机应用。
+     */
+    public static Result dex2oatHookOnly() {
+        String command =
+                "PKG='" + HOOK_PACKAGE + "'\n"
+                        + "run_cmd() {\n"
+                        + "  CMD=\"$1\"\n"
+                        + "  echo '$ ' \"$CMD\"\n"
+                        + "  sh -c \"$CMD\"\n"
+                        + "  CODE=$?\n"
+                        + "  echo 'exitCode='\"$CODE\"\n"
+                        + "  return $CODE\n"
+                        + "}\n"
+                        + "OK=0\n"
+                        + "run_cmd \"cmd package compile -m speed -f $PKG\" && OK=1\n"
+                        + "if [ $OK -ne 1 ]; then run_cmd \"cmd package compile -m speed-profile -f $PKG\" && OK=1; fi\n"
+                        + "if [ $OK -ne 1 ]; then run_cmd \"pm compile -m speed -f $PKG\" && OK=1; fi\n"
+                        + "if [ $OK -ne 1 ]; then\n"
+                        + "  echo '__HOOK_DEX2OAT_FAILED__'\n"
+                        + "  exit 12\n"
+                        + "fi\n"
+                        + "echo '__HOOK_DEX2OAT_DONE__'\n"
+                        + "exit 0\n";
 
         return runSuCommand(command);
     }
