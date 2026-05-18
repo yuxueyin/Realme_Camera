@@ -15,9 +15,12 @@ public final class ConfigRegistry {
 
     private static final String TAG = "ProtobufFeature";
 
+    private static final String V15_MARK = "AI_SCENERY_PROTO_V15_REGISTRY";
+
     private static final String[] CONFIG_CLASS_NAMES = new String[]{
             "com.camera.Protobuf.config.GrModeConfig",
-            "com.camera.Protobuf.config.VibeModeConfig"
+            "com.camera.Protobuf.config.VibeModeConfig",
+            "com.camera.Protobuf.config.AiSceneryModeConfig"
     };
 
     private ConfigRegistry() {
@@ -31,6 +34,8 @@ public final class ConfigRegistry {
      * 所以这个方法必须保留。
      */
     public static List<ProtobufConfig> loadAll(ProtobufModule host) {
+        Log.e(TAG, "ConfigRegistry loadAll " + V15_MARK + " classCount=" + CONFIG_CLASS_NAMES.length);
+
         List<ProtobufConfig> result = new ArrayList<>();
 
         for (String className : CONFIG_CLASS_NAMES) {
@@ -38,9 +43,9 @@ public final class ConfigRegistry {
 
             if (config != null) {
                 result.add(config);
-                Log.e(TAG, "ConfigRegistry found config: " + className);
+                Log.e(TAG, "ConfigRegistry found config: " + className + " " + V15_MARK);
             } else {
-                Log.e(TAG, "ConfigRegistry skip config: " + className);
+                Log.e(TAG, "ConfigRegistry skip config: " + className + " " + V15_MARK);
             }
         }
 

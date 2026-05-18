@@ -17,9 +17,9 @@ public final class VendorTagSettings {
     public static final String KEY_LSP_ACTIVE = "lsp_active";
     public static final String KEY_LSP_LAST_ACTIVE_TIME = "lsp_last_active_time";
 
-    public static final boolean DEFAULT_GR_ENABLED = true;
+    public static final boolean DEFAULT_GR_ENABLED = false;
     public static final boolean DEFAULT_VIBE_ENABLED = false;
-    public static final boolean DEFAULT_AI_SCENERY_ENABLED = true;
+    public static final boolean DEFAULT_AI_SCENERY_ENABLED = false;
 
     public static final String DEFAULT_AVAILABLE_ZOOM_VALUES =
             "1.26(28),1.575(35),2.0(40),2.50(50)";

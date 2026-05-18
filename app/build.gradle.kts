@@ -1,4 +1,4 @@
-import java.util.Properties
+﻿import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -21,7 +21,10 @@ android {
         minSdk = 36
         targetSdk = 36
         versionCode = 22
-        versionName = "2.2-ai-scenery"
+        versionName = "2.3_enhance"
+
+        // åªä¿ç•™å¸¸ç”¨è¯­è¨€èµ„æºï¼Œé…åˆ R8/resource shrink å‡å°‘ APK ä½“ç§¯ã€‚
+        resourceConfigurations += listOf("zh-rCN", "en")
     }
 
     sourceSets {
@@ -43,12 +46,20 @@ android {
 
     buildTypes {
         debug {
-            isMinifyEnabled = false
+            // å¹³æ—¶ä½ å®‰è£…çš„æ˜¯ debug åŒ…ï¼Œæ‰€ä»¥è¿™é‡Œä¹Ÿæ‰“å¼€ R8ï¼Œé¿å…åªç˜¦ release ä¸ç˜¦ debugã€‚
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = true
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
 
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
 
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
@@ -61,11 +72,22 @@ android {
         }
     }
 
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/AL2.0",
+                "META-INF/LGPL2.1",
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*",
+                "META-INF/*.kotlin_module"
+            )
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
 
     buildFeatures {
         compose = true
@@ -78,3 +100,4 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
 }
+

@@ -177,9 +177,9 @@ private class Material3Controller(activity: Activity) {
         private set
     var cameraVersion by mutableStateOf("读取中")
         private set
-    var lspVersion by mutableStateOf("读取中")
+    var lspStatus by mutableStateOf("读取中")
         private set
-    var rootManagerVersion by mutableStateOf("读取中")
+    var lspVersion by mutableStateOf("读取中")
         private set
     var themeMode by mutableStateOf(UiThemeMode.System)
         private set
@@ -206,8 +206,8 @@ private class Material3Controller(activity: Activity) {
         androidVersion = getAndroidVersion()
         systemVersion = getSystemVersion()
         cameraVersion = getPackageVersion(activity, "com.oplus.camera")
-        lspVersion = if (lspActive) "已激活" else "未激活"
-        rootManagerVersion = "检测中"
+        lspStatus = if (lspActive) "已激活" else "未激活"
+        lspVersion = getLspVersion(activity, lspActive)
         loadUiPreferences(activity)
         updateLogStatusAsync()
         updateEnvironmentVersionsAsync()
@@ -382,11 +382,11 @@ private class Material3Controller(activity: Activity) {
         val activity = activityRef.get() ?: return
         Thread {
             val active = VendorTagSettings.isLspActive(activity)
-            val detectedRootManager = getRootManagerVersion(activity)
+            val detectedLspVersion = getLspVersion(activity, active)
             activity.runOnUiThread {
                 lspActive = active
-                lspVersion = if (active) "已激活" else "未激活"
-                rootManagerVersion = detectedRootManager
+                lspStatus = if (active) "已激活" else "未激活"
+                lspVersion = detectedLspVersion
             }
         }.start()
     }
@@ -410,10 +410,8 @@ private class Material3Controller(activity: Activity) {
             activity.runOnUiThread {
                 rootActive = root
                 lspActive = VendorTagSettings.isLspActive(activity)
-                lspVersion = if (lspActive) "已激活" else "未激活"
-                if (rootManagerVersion == "检测中") {
-                    rootManagerVersion = getRootManagerVersion(activity)
-                }
+                lspStatus = if (lspActive) "已激活" else "未激活"
+                lspVersion = getLspVersion(activity, lspActive)
             }
         }.start()
     }
@@ -582,13 +580,11 @@ private fun LazyListScope.homePage(controller: Material3Controller) {
                     primary = controller.featureCount.toString(),
                     secondary = "已开启功能"
                 )
-                DualValueCard(
+                SingleValueCard(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     title = "环境版本",
-                    firstLabel = "LSP 状态",
-                    firstValue = controller.lspVersion,
-                    secondLabel = "Root 管理器",
-                    secondValue = controller.rootManagerVersion
+                    label = "LSP 版本",
+                    value = controller.lspVersion
                 )
             }
         }
@@ -651,11 +647,10 @@ private fun LazyListScope.albumPage() {
             ) {
                 Text("相册设置", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
-                    "当前版本暂未写入相册侧开关。后续需要补充相册能力时，可以继续在这个 Material3 页面基础上扩展。",
+                    "前方正在施工，禁止通行.......",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium
                 )
-                AssistChip(onClick = {}, label = { Text("Material3 Ready") })
             }
         }
     }
@@ -968,6 +963,30 @@ private fun CompactInfoCard(
 }
 
 @Composable
+private fun SingleValueCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    label: String,
+    value: String
+) {
+    ElevatedCard(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            VersionRow(label = label, value = value)
+        }
+    }
+}
+
+@Composable
 private fun DualValueCard(
     modifier: Modifier = Modifier,
     title: String,
@@ -1170,23 +1189,98 @@ private fun getPackageVersion(context: Context, packageName: String): String {
     }
 }
 
-private fun getRootManagerVersion(context: Context): String {
-    val candidates = listOf(
-        "com.topjohnwu.magisk" to "Magisk",
-        "io.github.huskydg.magisk" to "Magisk",
-        "me.weishu.kernelsu" to "KernelSU",
-        "me.bmax.apatch" to "APatch"
-    )
-    for ((pkg, label) in candidates) {
-        val version = getInstalledVersionOrNull(context, pkg)
-        if (!version.isNullOrBlank()) {
-            return "$label $version"
+private fun getLspVersion(context: Context, active: Boolean): String {
+    val modulePropVersion = getLspVersionFromModuleProp()
+    if (modulePropVersion.isNotBlank()) {
+        return modulePropVersion
+    }
+
+    val managerVersion = getInstalledVersionOrNull(context, "org.lsposed.manager")
+    if (!managerVersion.isNullOrBlank()) {
+        return "LSPosed $managerVersion"
+    }
+
+    if (isPackageInstalled(context, "org.lsposed.manager")) {
+        return "LSPosed 已安装"
+    }
+
+    return if (active) "版本未知" else "未检测到"
+}
+
+private fun getLspVersionFromModuleProp(): String {
+    val command = "cat " +
+        "/data/adb/modules/zygisk_lsposed/module.prop " +
+        "/data/adb/modules/riru_lsposed/module.prop " +
+        "/data/adb/modules/lsposed/module.prop " +
+        "/data/adb/modules/zygisk_lsposed_disabled/module.prop " +
+        "/data/adb/modules/*lsposed*/module.prop " +
+        "/data/adb/modules/*LSPosed*/module.prop " +
+        "2>/dev/null | head -n 120"
+    val content = runCommand(arrayOf("su", "-c", command), 1200).ifBlank {
+        runCommand(arrayOf("sh", "-c", command), 800)
+    }
+    if (content.isBlank()) {
+        return ""
+    }
+
+    var name = "LSPosed"
+    var version = ""
+    var versionCode = ""
+
+    content.lineSequence().forEach { rawLine ->
+        val line = rawLine.trim()
+        if (line.isEmpty() || line.startsWith("#") || !line.contains("=")) {
+            return@forEach
         }
-        if (isPackageInstalled(context, pkg)) {
-            return "$label 已安装"
+        val key = line.substringBefore("=").trim()
+        val value = line.substringAfter("=").trim()
+        when (key) {
+            "name" -> if (value.isNotBlank()) name = value
+            "version" -> version = value
+            "versionCode" -> versionCode = value
         }
     }
-    return "未检测到"
+
+    return when {
+        version.isNotBlank() && versionCode.isNotBlank() -> "$name $version ($versionCode)"
+        version.isNotBlank() -> "$name $version"
+        else -> ""
+    }
+}
+
+private fun runCommand(command: Array<String>, timeoutMs: Long): String {
+    var process: Process? = null
+    var reader: BufferedReader? = null
+    return try {
+        process = Runtime.getRuntime().exec(command)
+        val finished = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
+        if (!finished) {
+            try {
+                process.destroy()
+            } catch (_: Throwable) {
+            }
+            return ""
+        }
+        reader = BufferedReader(InputStreamReader(process.inputStream))
+        val builder = StringBuilder()
+        var line: String?
+        while (true) {
+            line = reader.readLine() ?: break
+            builder.append(line).append('\n')
+        }
+        builder.toString().trim()
+    } catch (_: Throwable) {
+        ""
+    } finally {
+        try {
+            reader?.close()
+        } catch (_: Throwable) {
+        }
+        try {
+            process?.destroy()
+        } catch (_: Throwable) {
+        }
+    }
 }
 
 private fun getInstalledVersionOrNull(context: Context, packageName: String): String? {

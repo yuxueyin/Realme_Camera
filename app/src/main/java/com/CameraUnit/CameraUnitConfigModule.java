@@ -14,16 +14,15 @@ import io.github.libxposed.api.XposedModule;
  * 不是替换 /odm/etc/camera/config/camera_unit_config 文件。
  * 也不是直接返回完整补全文件。
  *
- * 作用：
- * 1. 在相机读取 camera_unit_config 后，拿到原始配置字符串。
- * 2. 只把 GR 缺失节点动态添加进去。
- * 3. 返回合并后的配置给相机运行时使用。
+ * V15 标记：AI_SCENERY_V15_EXACT_NO_HDR_KEEP_HIGH_PIXEL
  */
 public class CameraUnitConfigModule extends XposedModule {
 
     public static final String TAG = "CameraUnitXp";
 
     private static final String TARGET_PACKAGE = "com.oplus.camera";
+
+    private static final String VERSION_MARK = "AI_SCENERY_V15_EXACT_NO_HDR_KEEP_HIGH_PIXEL";
 
     private ClassLoader appClassLoader;
 
@@ -33,14 +32,14 @@ public class CameraUnitConfigModule extends XposedModule {
 
     @Override
     public void onModuleLoaded(ModuleLoadedParam param) {
-        xlog(Log.ERROR, "CameraUnitConfigModule onModuleLoaded");
+        xlog(Log.ERROR, "CameraUnitConfigModule onModuleLoaded " + VERSION_MARK);
     }
 
     @Override
     public void onPackageLoaded(PackageLoadedParam param) {
         String packageName = param.getPackageName();
 
-        xlog(Log.ERROR, "CameraUnitConfigModule onPackageLoaded pkg=" + packageName);
+        xlog(Log.ERROR, "CameraUnitConfigModule onPackageLoaded pkg=" + packageName + " " + VERSION_MARK);
 
         if (!TARGET_PACKAGE.equals(packageName)) {
             return;
@@ -49,7 +48,7 @@ public class CameraUnitConfigModule extends XposedModule {
         appClassLoader = param.getDefaultClassLoader();
 
         if (installed) {
-            xlog(Log.ERROR, "CameraUnitConfigModule already installed, skip");
+            xlog(Log.ERROR, "CameraUnitConfigModule already installed, skip " + VERSION_MARK);
             return;
         }
 
@@ -58,7 +57,7 @@ public class CameraUnitConfigModule extends XposedModule {
         cameraUnitConfigXp = new CameraUnitConfigXp(this);
         cameraUnitConfigXp.install();
 
-        xlog(Log.ERROR, "CameraUnitConfigModule installed CameraUnitConfigXp");
+        xlog(Log.ERROR, "CameraUnitConfigModule installed CameraUnitConfigXp " + VERSION_MARK);
     }
 
     public Class<?> loadCameraClass(String className) throws ClassNotFoundException {

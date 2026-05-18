@@ -36,6 +36,10 @@ public final class VendorTagJsonEditor {
     private static final String TAG_AI_SCENERY_MODE_DE_HAZY_SWITCH =
             "com.oplus.feature.ai.scenery.mode.de.hazy.switch";
 
+
+    private static final String MARK_AI_SCENERY_VENDOR_V15 =
+            "AI_SCENERY_VENDOR_V15_KEEP_HIGH_PIXEL_DEHAZY";
+
     /*
      * 关键修复：
      *
@@ -437,6 +441,10 @@ public final class VendorTagJsonEditor {
         List<VendorTagInfo> list = new ArrayList<>();
         String enabledValue = settings.aiSceneryEnabled ? "1" : "0";
 
+        /*
+         * v15：按真实 AI 风光开关保留三项。
+         * 高像素和去雾不能关；普通拍摄失败不靠 VendorTag 伪造 TR 解决。
+         */
         list.add(new VendorTagInfo(
                 TAG_AI_SCENERY_MODE_SUPPORT,
                 "Byte",
@@ -457,6 +465,8 @@ public final class VendorTagJsonEditor {
                 "1",
                 enabledValue
         ));
+
+        xlog(null, "VendorTagJsonEditor add AI scenery vendor tags " + MARK_AI_SCENERY_VENDOR_V15);
 
         return list;
     }

@@ -24,12 +24,16 @@ public class GrModeFix {
 
     private static final String GR_CASE_NAME = "gr_mode_case";
     private static final String VIBE_CASE_NAME = "vibe_mode_case";
+    private static final String AI_SCENERY_CASE_NAME = "sat_street_case";
+    private static final String AI_SCENERY_ALT_CASE_NAME = "ai_scenery_mode_case";
     private static final String GR_FALLBACK_CASE_NAME = "sat_photo_case";
 
     private static final String GR_MODE_NAME = "gr_mode";
     private static final String GR_SHORT_MODE_NAME = "gr";
     private static final String VIBE_MODE_NAME = "vibe_mode";
     private static final String VIBE_SHORT_MODE_NAME = "vibe";
+    private static final String AI_SCENERY_MODE_NAME = "ai_scenery_mode";
+    private static final String AI_SCENERY_SHORT_MODE_NAME = "aiScenery";
     private static final String PHOTO_MODE_NAME = "photo_mode";
     private static final String COMMON_MODE_NAME = "common";
 
@@ -57,6 +61,18 @@ public class GrModeFix {
 
     private static final int FULL_PORTRAIT_WIDTH = 3072;
     private static final int FULL_PORTRAIT_HEIGHT = 4096;
+
+    /**
+     * 本机 HAL 实际给出的高像素输入是 8192x6144 / 6144x8192。
+     * 2 亿模式不再做 APS 超分输出；当前设备按真实 8192x6144 / 6144x8192 高像素输入保存为 50MP。
+     */
+    private static final int AI_SCENERY_HP_INPUT_LANDSCAPE_WIDTH = 8192;
+    private static final int AI_SCENERY_HP_INPUT_LANDSCAPE_HEIGHT = 6144;
+    private static final int AI_SCENERY_HP_INPUT_PORTRAIT_WIDTH = 6144;
+    private static final int AI_SCENERY_HP_INPUT_PORTRAIT_HEIGHT = 8192;
+
+
+    private static final long AI_SCENERY_HIGH_PIXEL_GUARD_MS = 30000L;
 
     /**
      * 保留旧常量名，避免其它旧逻辑引用时报错。
@@ -103,6 +119,8 @@ public class GrModeFix {
     private volatile int currentFullWidth = FULL_LANDSCAPE_WIDTH;
     private volatile int currentFullHeight = FULL_LANDSCAPE_HEIGHT;
 
+    private volatile long aiSceneryHighPixelUntilMs = 0L;
+
     private volatile int currentFilterMode = FILTER_MODE_UNKNOWN;
     private volatile long currentFilterModeUpdateMs = 0L;
     private volatile String currentFilterModeReason = "init";
@@ -131,7 +149,7 @@ public class GrModeFix {
         hookCamera2ImplCreateNewSessionDelayRestore();
         hookFaceBeautyPhotoChainModeFallback();
 
-        host.xlog(Log.ERROR, "GrModeFix installed package=com.camera.gr v46-vibe-gr-facebeauty-photo-chain");
+        host.xlog(Log.ERROR, "GrModeFix installed package=com.camera.gr v53-ai-scenery-200mp-as-50mp-no-sr");
     }
 
     private void hookAndroidLogForFilterMode() {
@@ -245,6 +263,10 @@ public class GrModeFix {
 
         String text = String.valueOf(tag) + " " + msg;
         String lower = text.toLowerCase(Locale.ROOT);
+
+        if (isAiSceneryHighPixelText(lower)) {
+            markAiSceneryHighPixelWindow("camera-log " + safeShort(text));
+        }
 
         if (!isCameraModeLog(lower)) {
             return;
@@ -709,6 +731,7 @@ public class GrModeFix {
         String[] classNames = new String[]{
                 "com.oplus.ocs.camera.producer.mode.GRCapMode",
                 "com.oplus.ocs.camera.producer.mode.VibeCapMode",
+                "com.oplus.ocs.camera.producer.mode.AISceneryMode",
                 "com.oplus.ocs.camera.producer.mode.BaseMode"
         };
 
@@ -839,13 +862,18 @@ public class GrModeFix {
                             "BaseMode." + methodName
                     );
 
-                    if (isGrRelatedObject(thisObject)) {
+                    boolean aiSceneryRelated = isAiSceneryRelatedObject(thisObject)
+                            || containsText(newArgs, AI_SCENERY_CASE_NAME)
+                            || containsText(newArgs, AI_SCENERY_ALT_CASE_NAME)
+                            || containsText(newArgs, AI_SCENERY_MODE_NAME);
+
+                    if (isGrRelatedObject(thisObject) || aiSceneryRelated) {
                         markGrPatchWindow();
 
                     }
 
                     if ("buildStreamSurface".equals(methodName)
-                            && isGrRelatedObject(thisObject)
+                            && (isGrRelatedObject(thisObject) || aiSceneryRelated)
                             && isTargetRearMainRawOutputArgs(newArgs)) {
                         changed |= patchSurfaceSizePairsInArgs(
                                 newArgs,
@@ -853,8 +881,9 @@ public class GrModeFix {
                         );
                     }
 
-                    if (isGrRelatedObject(thisObject) || isVibeRelatedObject(thisObject)
-                            || containsText(newArgs, GR_CASE_NAME) || containsText(newArgs, VIBE_CASE_NAME)) {
+                    if (isGrRelatedObject(thisObject) || isVibeRelatedObject(thisObject) || aiSceneryRelated
+                            || containsText(newArgs, GR_CASE_NAME) || containsText(newArgs, VIBE_CASE_NAME)
+                            || containsText(newArgs, AI_SCENERY_CASE_NAME) || containsText(newArgs, AI_SCENERY_ALT_CASE_NAME)) {
                         host.xlog(
                                 Log.ERROR,
                                 "GR_BASEMODE_V42 call method="
@@ -1400,6 +1429,25 @@ public class GrModeFix {
             return false;
         }
 
+        /*
+         * AI 风光高像素/“2 亿”入口实际输出按 50MP 处理时，
+         * 不能再把 raw_output(format 37) 的 halSurfaceSize 从 4096x3072
+         * 强制改成 8192x6144。日志里的崩溃前错误：
+         * offlinechicamera.cpp GetFrameworkBuffers request hal stream buffer failed
+         * 就是在 HAL 申请这个被放大的 raw buffer 时触发的。
+         *
+         * 50MP 输出真正需要的是 capture(format 35) 的 8192x6144，
+         * raw_output / raw16 / raw_mfnr 保持原链路的小 HAL 尺寸即可。
+         */
+        if (isAiSceneryHighPixelWindowActive()) {
+            host.xlog(
+                    Log.ERROR,
+                    "AI_SCENERY_200MP_V27_50MP_SAFE_RAW skip SurfacePool raw format37 full-size patch text="
+                            + safeShort(text)
+            );
+            return false;
+        }
+
         boolean intention3 =
                 lower.contains("mintention: 3")
                         || lower.contains("mintention=3")
@@ -1581,6 +1629,7 @@ public class GrModeFix {
             List list = (List) object;
 
             changed |= patchApsKeyValueList(list, allowOutputSizePatch, where);
+            changed |= patchAiSceneryUnsafeAlgoList(list, where);
 
             for (Object item : list) {
                 changed |= patchApsParamsDeep(
@@ -1620,6 +1669,11 @@ public class GrModeFix {
             return false;
         }
 
+        String objectText = safeToString(object);
+        if (isAiSceneryHighPixelApsText(objectText)) {
+            markAiSceneryHighPixelWindow("APS_OBJECT " + where + " " + safeShort(objectText));
+        }
+
         String className = objectClassName(object);
 
         if (!shouldScanApsParamClass(className)) {
@@ -1645,6 +1699,25 @@ public class GrModeFix {
 
                     if (child == null) {
                         continue;
+                    }
+
+                    if (child instanceof Object[] && isAiSceneryHighPixelWindowActive()) {
+                        Object filteredArray = filterAiSceneryUnsafeAlgoArray(
+                                (Object[]) child,
+                                field.getType(),
+                                where + "." + field.getName()
+                        );
+
+                        if (filteredArray != child) {
+                            try {
+                                field.set(object, filteredArray);
+                                child = filteredArray;
+                                changed = true;
+                            } catch (Throwable t) {
+                                host.xlog(Log.ERROR, "AI_SCENERY_200MP_V27_50MP_SAFE_RAW replace unsafe APS algo array failed where="
+                                        + where + "." + field.getName() + " err=" + String.valueOf(t));
+                            }
+                        }
                     }
 
                     changed |= patchApsParamsDeep(
@@ -1828,11 +1901,22 @@ public class GrModeFix {
                     || "output_width".equals(text)
                     || "output_height".equals(text)
                     || "crop_width".equals(text)
-                    || "crop_height".equals(text)) {
+                    || "crop_height".equals(text)
+                    || "face_beauty_version".equals(text)
+                    || "face_beauty_type".equals(text)
+                    || "group_photo_support".equals(text)
+                    || "group_photo_on_off".equals(text)
+                    || "ai_rectify_enable".equals(text)
+                    || "face_rectify_enable".equals(text)
+                    || "custom_beauty_param".equals(text)) {
                 hasTargetKey = true;
             }
 
             if (text.contains("gr_mode")
+                    || text.contains("ai_scenery_mode")
+                    || text.contains("ai.scenery")
+                    || text.contains("sat_street_case")
+                    || text.contains("aiscenery")
                     || text.contains("ricoh")
                     || text.contains("master_mode_vignette")
                     || text.contains("custom_focal_length")
@@ -1881,17 +1965,32 @@ public class GrModeFix {
                         || "output_width".equals(key)
                         || "output_height".equals(key)
                         || "crop_width".equals(key)
-                        || "crop_height".equals(key)) {
+                        || "crop_height".equals(key)
+                        || "face_beauty_version".equals(key)
+                        || "face_beauty_type".equals(key)
+                        || "group_photo_support".equals(key)
+                        || "group_photo_on_off".equals(key)
+                        || "ai_rectify_enable".equals(key)
+                        || "face_rectify_enable".equals(key)
+                        || "custom_beauty_param".equals(key)) {
                     hasTargetKey = true;
                 }
 
                 if (key.contains("gr_mode")
+                        || key.contains("ai_scenery_mode")
+                        || key.contains("ai.scenery")
+                        || key.contains("sat_street_case")
+                        || key.contains("aiscenery")
                         || key.contains("ricoh")
                         || key.contains("master_mode_vignette")
                         || key.contains("custom_focal_length")
                         || key.contains("gr_mode_particle")
                         || key.contains("gr_mode_vignette")
                         || valueText.contains("gr_mode")
+                        || valueText.contains("ai_scenery_mode")
+                        || valueText.contains("ai.scenery")
+                        || valueText.contains("sat_street_case")
+                        || valueText.contains("aiscenery")
                         || valueText.contains("ricoh")) {
                     hasGrSignal = true;
                 }
@@ -1930,19 +2029,268 @@ public class GrModeFix {
             return castLikeOldValue(oldValue, false);
         }
 
+        if (isAiSceneryHighPixelWindowActive()) {
+            if ("face_beauty_version".equals(key)
+                    || "face_beauty_type".equals(key)
+                    || "group_photo_support".equals(key)
+                    || "group_photo_on_off".equals(key)
+                    || "ai_rectify_enable".equals(key)
+                    || "face_rectify_enable".equals(key)) {
+                return castLikeOldValue(oldValue, 0);
+            }
+
+            if ("custom_beauty_param".equals(key)) {
+                return zeroCustomBeautyParam(oldValue);
+            }
+        }
+
         if (!allowOutputSizePatch) {
             return oldValue;
         }
 
         /*
-         * 关键：APS 输出尺寸跟随当前方向，不能固定 3072x4096，也不能固定 4096x3072。
+         * 普通 GR/Vibe/AI 风光使用 12MP photo 链路时，APS 输出尺寸跟随 currentFullWidth/currentFullHeight。
+         *
+         * AI 风光 2 亿入口在当前设备实际只有 8192x6144 / 6144x8192。
+         * 这里强制保持真实输入尺寸，让最终保存为 50MP；不再写 200MP 超分尺寸。
          */
         if ("output_width".equals(key) || "crop_width".equals(key)) {
+            if (isAiSceneryHighPixelWindowActive()) {
+                logAiSceneryKeepInputSize(key, oldValue, true);
+                return oldValue;
+            }
+
             return castLikeOldValue(oldValue, currentFullWidth);
         }
 
         if ("output_height".equals(key) || "crop_height".equals(key)) {
+            if (isAiSceneryHighPixelWindowActive()) {
+                logAiSceneryKeepInputSize(key, oldValue, false);
+                return oldValue;
+            }
+
             return castLikeOldValue(oldValue, currentFullHeight);
+        }
+
+        return oldValue;
+    }
+
+    private boolean isAiSceneryHighPixelApsText(String text) {
+        if (text == null) {
+            return false;
+        }
+
+        String lower = text.toLowerCase(Locale.ROOT);
+
+        boolean highPixelSignal = lower.contains("high_pic_size_enable, 1")
+                || lower.contains("high_pic_size_enable=1")
+                || lower.contains("high_pixel_200mp_enable, 1")
+                || lower.contains("high_pixel_200mp_enable=1")
+                || lower.contains("ai_scenery_high_pixel, 200")
+                || lower.contains("ai_scenery_high_pixel=200")
+                || lower.contains("mpicturesize: 8192x6144")
+                || lower.contains("mpicturesize=8192x6144")
+                || lower.contains("mpicturesize: 6144x8192")
+                || lower.contains("mpicturesize=6144x8192");
+
+        if (!highPixelSignal) {
+            return false;
+        }
+
+        boolean cameraSignal = lower.contains("ai_scenery")
+                || lower.contains("aiscenery")
+                || lower.contains("operation_mode, 32769")
+                || lower.contains("operation_mode=32769")
+                || lower.contains("moperationmode='8001'")
+                || lower.contains("moperationmode: 8001")
+                || lower.contains("logic_camera_id, 3")
+                || lower.contains("logic_camera_id=3");
+
+        return cameraSignal || isGrPatchWindowActive();
+    }
+
+    private Object filterAiSceneryUnsafeAlgoArray(Object[] array, Class arrayType, String where) {
+        if (array == null || array.length == 0) {
+            return array;
+        }
+
+        if (!isAiSceneryHighPixelWindowActive()) {
+            return array;
+        }
+
+        int keepCount = 0;
+        boolean changed = false;
+
+        for (Object item : array) {
+            if (item instanceof String && isAiSceneryUnsafeAlgo(((String) item).toLowerCase(Locale.ROOT))) {
+                changed = true;
+                host.xlog(
+                        Log.ERROR,
+                        "AI_SCENERY_200MP_V27_50MP_SAFE_RAW remove unsafe APS algo array where="
+                                + where
+                                + " value="
+                                + describeValue(item)
+                );
+                continue;
+            }
+
+            keepCount++;
+        }
+
+        if (!changed) {
+            return array;
+        }
+
+        try {
+            Class componentType = String.class;
+
+            if (arrayType != null && arrayType.isArray() && arrayType.getComponentType() != null) {
+                componentType = arrayType.getComponentType();
+            }
+
+            Object newArray = java.lang.reflect.Array.newInstance(componentType, keepCount);
+            int out = 0;
+
+            for (Object item : array) {
+                if (item instanceof String && isAiSceneryUnsafeAlgo(((String) item).toLowerCase(Locale.ROOT))) {
+                    continue;
+                }
+
+                java.lang.reflect.Array.set(newArray, out, item);
+                out++;
+            }
+
+            return newArray;
+        } catch (Throwable t) {
+            host.xlog(Log.ERROR, "AI_SCENERY_200MP_V27_50MP_SAFE_RAW build filtered APS algo array failed where="
+                    + where + " err=" + String.valueOf(t));
+            return array;
+        }
+    }
+
+    private boolean patchAiSceneryUnsafeAlgoList(List list, String where) {
+        if (list == null || list.isEmpty()) {
+            return false;
+        }
+
+        if (!isAiSceneryHighPixelWindowActive()) {
+            return false;
+        }
+
+        boolean changed = false;
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            Object item = list.get(i);
+
+            if (!(item instanceof String)) {
+                continue;
+            }
+
+            String value = ((String) item).toLowerCase(Locale.ROOT);
+
+            if (!isAiSceneryUnsafeAlgo(value)) {
+                continue;
+            }
+
+            try {
+                Object removed = list.remove(i);
+                changed = true;
+
+                host.xlog(
+                        Log.ERROR,
+                        "AI_SCENERY_200MP_V27_50MP_SAFE_RAW remove unsafe APS algo where="
+                                + where
+                                + " value="
+                                + describeValue(removed)
+                );
+            } catch (Throwable t) {
+                host.xlog(Log.ERROR, "AI_SCENERY_200MP_V27_50MP_SAFE_RAW remove APS algo failed: " + String.valueOf(t));
+            }
+        }
+
+        return changed;
+    }
+
+    private boolean isAiSceneryUnsafeAlgo(String value) {
+        if (value == null) {
+            return false;
+        }
+
+        return value.contains("aps_algo_face_info")
+                || value.contains("aps_algo_face_beauty")
+                || value.contains("aps_algo_face_rectify")
+                || value.contains("aps_algo_mask_refine")
+                || value.contains("aps_algo_facebase_retouch")
+                || value.contains("aps_algo_portraitrepair");
+    }
+
+    private void logAiSceneryKeepInputSize(String key, Object oldValue, boolean widthKey) {
+        int value = toInt(oldValue, -1);
+
+        boolean highPixelInputSize = value == AI_SCENERY_HP_INPUT_LANDSCAPE_WIDTH
+                || value == AI_SCENERY_HP_INPUT_LANDSCAPE_HEIGHT
+                || value == AI_SCENERY_HP_INPUT_PORTRAIT_WIDTH
+                || value == AI_SCENERY_HP_INPUT_PORTRAIT_HEIGHT;
+
+        if (!highPixelInputSize) {
+            return;
+        }
+
+        host.xlog(
+                Log.ERROR,
+                "AI_SCENERY_200MP_V27_50MP_SAFE_RAW keep real APS "
+                        + (widthKey ? "width" : "height")
+                        + " key="
+                        + key
+                        + " value="
+                        + describeValue(oldValue)
+                        + " reason=no-native-sr-buffer"
+        );
+    }
+
+    private Object zeroCustomBeautyParam(Object oldValue) {
+        if (oldValue instanceof int[]) {
+            int[] oldArray = (int[]) oldValue;
+            return new int[oldArray.length];
+        }
+
+        if (oldValue instanceof long[]) {
+            long[] oldArray = (long[]) oldValue;
+            return new long[oldArray.length];
+        }
+
+        if (oldValue instanceof float[]) {
+            float[] oldArray = (float[]) oldValue;
+            return new float[oldArray.length];
+        }
+
+        if (oldValue instanceof double[]) {
+            double[] oldArray = (double[]) oldValue;
+            return new double[oldArray.length];
+        }
+
+        if (oldValue instanceof Object[]) {
+            Object[] oldArray = (Object[]) oldValue;
+            Object[] newArray = new Object[oldArray.length];
+            for (int i = 0; i < newArray.length; i++) {
+                Object oldItem = oldArray[i];
+                if (oldItem instanceof Long) {
+                    newArray[i] = 0L;
+                } else if (oldItem instanceof Float) {
+                    newArray[i] = 0f;
+                } else if (oldItem instanceof Double) {
+                    newArray[i] = 0d;
+                } else if (oldItem instanceof String) {
+                    newArray[i] = "0";
+                } else {
+                    newArray[i] = 0;
+                }
+            }
+            return newArray;
+        }
+
+        if (oldValue instanceof String) {
+            return "0,0,0,0,0,0,0,0,0,0,0,0,0,0";
         }
 
         return oldValue;
@@ -2055,18 +2403,25 @@ public class GrModeFix {
             return value;
         }
 
-        if (GR_SHORT_MODE_NAME.equals(value) || VIBE_SHORT_MODE_NAME.equals(value)) {
+        if (GR_SHORT_MODE_NAME.equals(value)
+                || VIBE_SHORT_MODE_NAME.equals(value)
+                || AI_SCENERY_SHORT_MODE_NAME.equals(value)
+                || "ai_scenery".equals(value)
+                || "aiScenery".equals(value)) {
             return COMMON_MODE_NAME;
         }
 
-        if (GR_MODE_NAME.equals(value) || VIBE_MODE_NAME.equals(value)) {
+        if (GR_MODE_NAME.equals(value) || VIBE_MODE_NAME.equals(value) || AI_SCENERY_MODE_NAME.equals(value)) {
             return PHOTO_MODE_NAME;
         }
 
         String fixed = value;
         fixed = fixed.replace(GR_CASE_NAME, GR_FALLBACK_CASE_NAME);
         fixed = fixed.replace(VIBE_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        fixed = fixed.replace(AI_SCENERY_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        fixed = fixed.replace(AI_SCENERY_ALT_CASE_NAME, GR_FALLBACK_CASE_NAME);
         fixed = fixed.replace(VIBE_MODE_NAME, PHOTO_MODE_NAME);
+        fixed = fixed.replace(AI_SCENERY_MODE_NAME, PHOTO_MODE_NAME);
         return fixed;
     }
 
@@ -2079,7 +2434,8 @@ public class GrModeFix {
         while (current != null) {
             String message = String.valueOf(current.getMessage());
             if (message.contains("FaceBeautyKeys")
-                    && (message.contains("mode: vibe") || message.contains("mode: gr"))) {
+                    && (message.contains("mode: vibe") || message.contains("mode: gr")
+                    || message.contains("mode: aiScenery") || message.contains("mode: ai_scenery"))) {
                 return true;
             }
             current = current.getCause();
@@ -2152,6 +2508,7 @@ public class GrModeFix {
                     boolean changed = false;
                     boolean isGrSession = false;
                     boolean isVibeSession = false;
+                    boolean isAiScenerySession = false;
                     boolean isMasterSession = false;
                     List<RestoreRecord> restoreRecords = new ArrayList<>();
 
@@ -2162,8 +2519,9 @@ public class GrModeFix {
 
                         boolean grRelated = isGrRelatedObject(arg);
                         boolean vibeRelated = isVibeRelatedObject(arg);
+                        boolean aiSceneryRelated = isAiSceneryRelatedObject(arg);
 
-                        if (!grRelated && !vibeRelated) {
+                        if (!grRelated && !vibeRelated && !aiSceneryRelated) {
                             continue;
                         }
 
@@ -2175,20 +2533,32 @@ public class GrModeFix {
                             isVibeSession = true;
                         }
 
+                        if (aiSceneryRelated) {
+                            isAiScenerySession = true;
+                        }
+
                         host.xlog(
                                 Log.ERROR,
-                                "GR_DELAY_V44 before photo-chain gr="
+                                "GR_DELAY_V47 before photo-chain gr="
                                         + grRelated
                                         + " vibe="
                                         + vibeRelated
+                                        + " aiScenery="
+                                        + aiSceneryRelated
                                         + " argClass="
                                         + objectClassName(arg)
                                         + " text="
                                         + safeToString(arg)
                         );
 
+                        String argText = safeToString(arg);
+
+                        if (aiSceneryRelated && isAiSceneryHighPixelText(argText)) {
+                            markAiSceneryHighPixelWindow("Camera2Impl.createNewSession " + safeShort(argText));
+                        }
+
                         updateCurrentFullSize(
-                                chooseFullSizeByText(safeToString(arg)),
+                                chooseFullSizeByText(argText),
                                 "Camera2Impl.createNewSession photo-chain entity"
                         );
 
@@ -2199,7 +2569,7 @@ public class GrModeFix {
 
                         host.xlog(
                                 Log.ERROR,
-                                "GR_DELAY_V44 after changed="
+                                "GR_DELAY_V47 after changed="
                                         + changed
                                         + " text="
                                         + safeToString(arg)
@@ -2208,7 +2578,7 @@ public class GrModeFix {
 
                     if (isMasterSession) {
 
-                    } else if (isGrSession || isVibeSession) {
+                    } else if (isGrSession || isVibeSession || isAiScenerySession) {
                         markGrPatchWindow();
 
                     }
@@ -2219,7 +2589,7 @@ public class GrModeFix {
                         host.xlog(Log.ERROR, "GR_DELAY_V44 no restore records");
                     }
 
-                    if (isGrSession || isVibeSession) {
+                    if (isGrSession || isVibeSession || isAiScenerySession) {
                         grCreateSessionActive.set(true);
                     }
 
@@ -2230,7 +2600,7 @@ public class GrModeFix {
 
                         return chain.proceed();
                     } finally {
-                        if (isGrSession || isVibeSession) {
+                        if (isGrSession || isVibeSession || isAiScenerySession) {
                             grCreateSessionActive.set(false);
                         }
                     }
@@ -2595,8 +2965,12 @@ public class GrModeFix {
         String fixed = fixPhotoChainCaseOnly(value);
 
         fixed = fixed.replace(VIBE_MODE_NAME, PHOTO_MODE_NAME);
+        fixed = fixed.replace(AI_SCENERY_MODE_NAME, PHOTO_MODE_NAME);
 
-        if (VIBE_SHORT_MODE_NAME.equals(fixed)) {
+        if (VIBE_SHORT_MODE_NAME.equals(fixed)
+                || AI_SCENERY_SHORT_MODE_NAME.equals(fixed)
+                || "ai_scenery".equals(fixed)
+                || "aiScenery".equals(fixed)) {
             return COMMON_MODE_NAME;
         }
 
@@ -2608,11 +2982,14 @@ public class GrModeFix {
             return value;
         }
 
-        if (GR_MODE_NAME.equals(value) || VIBE_MODE_NAME.equals(value)) {
+        if (GR_MODE_NAME.equals(value) || VIBE_MODE_NAME.equals(value) || AI_SCENERY_MODE_NAME.equals(value)) {
             return PHOTO_MODE_NAME;
         }
 
-        if (VIBE_SHORT_MODE_NAME.equals(value)) {
+        if (VIBE_SHORT_MODE_NAME.equals(value)
+                || AI_SCENERY_SHORT_MODE_NAME.equals(value)
+                || "ai_scenery".equals(value)
+                || "aiScenery".equals(value)) {
             return COMMON_MODE_NAME;
         }
 
@@ -2627,6 +3004,8 @@ public class GrModeFix {
         String fixed = value;
         fixed = fixed.replace(GR_CASE_NAME, GR_FALLBACK_CASE_NAME);
         fixed = fixed.replace(VIBE_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        fixed = fixed.replace(AI_SCENERY_CASE_NAME, GR_FALLBACK_CASE_NAME);
+        fixed = fixed.replace(AI_SCENERY_ALT_CASE_NAME, GR_FALLBACK_CASE_NAME);
         return fixed;
     }
 
@@ -2709,6 +3088,41 @@ public class GrModeFix {
                 || lower.contains("modename：vibe")
                 || lower.contains("modename: vibe")
                 || lower.contains("vibe_photo");
+    }
+
+    private boolean isAiSceneryRelatedObject(Object object) {
+        if (object == null) {
+            return false;
+        }
+
+        String className = object.getClass().getName();
+
+        if (className != null) {
+            String lowerClass = className.toLowerCase(Locale.ROOT);
+
+            if (lowerClass.contains("aiscenery")
+                    || lowerClass.contains("ai_scenery")
+                    || lowerClass.contains("scenery")) {
+                return true;
+            }
+        }
+
+        String text = safeToString(object);
+
+        if (text == null) {
+            return false;
+        }
+
+        String lower = text.toLowerCase(Locale.ROOT);
+
+        return lower.contains(AI_SCENERY_MODE_NAME)
+                || lower.contains(AI_SCENERY_CASE_NAME)
+                || lower.contains(AI_SCENERY_ALT_CASE_NAME)
+                || lower.contains("aiscenery")
+                || lower.contains("ai_scenery")
+                || lower.contains("ai scenery")
+                || lower.contains("ai.scenery")
+                || lower.contains("sat_street_case");
     }
 
     private boolean isMasterRelatedObject(Object object) {
@@ -2916,6 +3330,57 @@ public class GrModeFix {
         return System.currentTimeMillis() <= grPatchUntilMs;
     }
 
+    private void markAiSceneryHighPixelWindow(String reason) {
+        long until = System.currentTimeMillis() + AI_SCENERY_HIGH_PIXEL_GUARD_MS;
+        aiSceneryHighPixelUntilMs = until;
+
+        host.xlog(
+                Log.ERROR,
+                "AI_SCENERY_200MP_V27_50MP_SAFE_RAW mark high-pixel untilMs="
+                        + until
+                        + " reason="
+                        + reason
+        );
+    }
+
+    private boolean isAiSceneryHighPixelWindowActive() {
+        return System.currentTimeMillis() <= aiSceneryHighPixelUntilMs;
+    }
+
+    private boolean isAiSceneryHighPixelText(String text) {
+        if (text == null) {
+            return false;
+        }
+
+        String lower = text.toLowerCase(Locale.ROOT);
+
+        boolean aiScenerySignal = lower.contains("aiscenery")
+                || lower.contains("ai_scenery")
+                || lower.contains("ai scenery")
+                || lower.contains("ai.scenery");
+
+        if (!aiScenerySignal) {
+            return false;
+        }
+
+        boolean explicit200m = lower.contains("high_pixel_200m")
+                || lower.contains("200mp is on")
+                || lower.contains("high_pixel_200mp_enable, 1")
+                || lower.contains("ai_scenery_high_pixel, 200")
+                || lower.contains("capture_200m_defer_job_type")
+                || lower.contains("defer_high_pixel_200mp_enable");
+
+        boolean highPictureSession =
+                (lower.contains("mbhighpicturesizeenable: true")
+                        || lower.contains("mbhighpicturesizeenable=true"))
+                        && (lower.contains("mpicturesize: 8192x6144")
+                        || lower.contains("mpicturesize=8192x6144")
+                        || lower.contains("mpicturesize: 6144x8192")
+                        || lower.contains("mpicturesize=6144x8192"));
+
+        return explicit200m || highPictureSession;
+    }
+
     private boolean isSmall720(Size size) {
         if (size == null) {
             return false;
@@ -2941,11 +3406,15 @@ public class GrModeFix {
     }
 
     private boolean isFullLandscape(int width, int height) {
-        return width == FULL_LANDSCAPE_WIDTH && height == FULL_LANDSCAPE_HEIGHT;
+        return (width == FULL_LANDSCAPE_WIDTH && height == FULL_LANDSCAPE_HEIGHT)
+                || (width == AI_SCENERY_HP_INPUT_LANDSCAPE_WIDTH
+                && height == AI_SCENERY_HP_INPUT_LANDSCAPE_HEIGHT);
     }
 
     private boolean isFullPortrait(int width, int height) {
-        return width == FULL_PORTRAIT_WIDTH && height == FULL_PORTRAIT_HEIGHT;
+        return (width == FULL_PORTRAIT_WIDTH && height == FULL_PORTRAIT_HEIGHT)
+                || (width == AI_SCENERY_HP_INPUT_PORTRAIT_WIDTH
+                && height == AI_SCENERY_HP_INPUT_PORTRAIT_HEIGHT);
     }
 
     private boolean isFullSize(int width, int height) {
@@ -3013,6 +3482,22 @@ public class GrModeFix {
         }
 
         String lower = text.toLowerCase(Locale.ROOT);
+
+        if (lower.contains("8192x6144")
+                || lower.contains("8192 x 6144")
+                || lower.contains("mpicturesize: 8192x6144")
+                || lower.contains("mpicturesize=8192x6144")) {
+            markAiSceneryHighPixelWindow("chooseFullSizeByText " + safeShort(text));
+            return new Size(AI_SCENERY_HP_INPUT_LANDSCAPE_WIDTH, AI_SCENERY_HP_INPUT_LANDSCAPE_HEIGHT);
+        }
+
+        if (lower.contains("6144x8192")
+                || lower.contains("6144 x 8192")
+                || lower.contains("mpicturesize: 6144x8192")
+                || lower.contains("mpicturesize=6144x8192")) {
+            markAiSceneryHighPixelWindow("chooseFullSizeByText " + safeShort(text));
+            return new Size(AI_SCENERY_HP_INPUT_PORTRAIT_WIDTH, AI_SCENERY_HP_INPUT_PORTRAIT_HEIGHT);
+        }
 
         if (lower.contains("4096x3072")
                 || lower.contains("4096 x 3072")

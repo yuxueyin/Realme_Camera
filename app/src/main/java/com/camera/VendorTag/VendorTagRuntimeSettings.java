@@ -234,9 +234,9 @@ public final class VendorTagRuntimeSettings {
                     "1.26(28),2.0(40)";
 
             return new Settings(
-                    true,
                     false,
-                    true,
+                    false,
+                    false,
                     available,
                     countCommaItems(available),
                     marked,

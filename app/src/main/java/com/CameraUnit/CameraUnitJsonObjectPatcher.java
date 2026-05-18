@@ -13,9 +13,11 @@ public final class CameraUnitJsonObjectPatcher {
 
     private static final String MODE_GR = "gr_mode";
     private static final String MODE_VIBE = "vibe_mode";
+    private static final String MODE_AI_SCENERY = "ai_scenery_mode";
 
     private static final String OPERATION_GR = "80BE";
     private static final String OPERATION_VIBE_SAFE = "8001";
+    private static final String OPERATION_AI_SCENERY = "8001";
 
     private static final String DEFAULT_REAR_MAIN_CUSTOM_INFO =
             "8010,3_35_3,4096X3072,3_32_3,4096X3072,3_37_3,4096X3072,"
@@ -76,8 +78,11 @@ public final class CameraUnitJsonObjectPatcher {
                             + " hasCaptureStreamNumber=" + root.has("capture_stream_number")
             );
 
+            log(host, "CameraUnitJsonObjectPatcher AI_SCENERY_V15_EXACT_NO_HDR_KEEP_HIGH_PIXEL");
+
             changed |= patchGrMode(root, host);
             changed |= patchVibeModePhotoChain(root, host);
+            changed |= patchAiSceneryMountedExact(root, host);
 
             verify(root, host);
 
@@ -137,6 +142,108 @@ public final class CameraUnitJsonObjectPatcher {
 
         return changed;
     }
+
+
+    private static boolean patchAiSceneryMountedExact(JSONObject root, Object host) {
+        boolean changed = false;
+
+        /*
+         * 按用户实际可用的挂载版 camera_unit_config 精确补 ai_scenery_mode。
+         *
+         * 挂载版里 ai_scenery_mode 只出现在：
+         * - mode_type_list.rear_main
+         * - mode_type_list.rear_sat
+         * - mode_operation_mode.ai_scenery_mode = 8001
+         * - capture_stream_number.ai_scenery_mode.rear_sat.2dol = 2
+         *
+         * 注意：
+         * - 不创建 camera_feature_table；
+         * - 不创建 str_pool；
+         * - 不创建 ai_scenery_mode_case；
+         * - 不把 ai_scenery_mode 加到 rear_wide / rear_tele。
+         */
+        changed |= addModeToCameraType(root, "rear_main", MODE_AI_SCENERY, host);
+        changed |= addModeToCameraType(root, "rear_sat", MODE_AI_SCENERY, host);
+
+        changed |= removeModeFromCameraType(root, "rear_wide", MODE_AI_SCENERY, host);
+        changed |= removeModeFromCameraType(root, "rear_tele", MODE_AI_SCENERY, host);
+
+        changed |= putModeOperation(root, MODE_AI_SCENERY, OPERATION_AI_SCENERY, host);
+
+        changed |= replaceCaptureStreamNumberRearSatOnly(root, MODE_AI_SCENERY, host);
+
+        changed |= putUsecaseIfMissing(root, "sat_street_case", createSatStreetCase(), host);
+
+        changed |= removeUsecase(root, "ai_scenery_mode_case", host);
+
+        log(host, "CameraUnitJsonObjectPatcher AI_SCENERY_V15_EXACT_NO_HDR_KEEP_HIGH_PIXEL applied changed=" + changed);
+
+        return changed;
+    }
+
+    private static boolean replaceCaptureStreamNumberRearSatOnly(
+            JSONObject root,
+            String modeName,
+            Object host
+    ) {
+        try {
+            JSONObject captureStreamNumber = root.optJSONObject("capture_stream_number");
+
+            if (captureStreamNumber == null) {
+                captureStreamNumber = new JSONObject();
+                root.put("capture_stream_number", captureStreamNumber);
+                log(host, "CameraUnitJsonObjectPatcher create capture_stream_number");
+            }
+
+            JSONObject newModeObject = new JSONObject();
+            JSONObject rearSat = new JSONObject();
+            rearSat.put("2dol", "2");
+            newModeObject.put("rear_sat", rearSat);
+
+            JSONObject oldModeObject = captureStreamNumber.optJSONObject(modeName);
+            String oldText = oldModeObject == null ? "null" : oldModeObject.toString();
+            String newText = newModeObject.toString();
+
+            if (newText.equals(oldText)) {
+                log(host, "CameraUnitJsonObjectPatcher capture_stream_number " + modeName + " already rear_sat only");
+                return false;
+            }
+
+            captureStreamNumber.put(modeName, newModeObject);
+
+            log(host, "CameraUnitJsonObjectPatcher replace capture_stream_number " + modeName + " old=" + oldText + " new=" + newText);
+
+            return true;
+        } catch (Throwable t) {
+            log(host, "CameraUnitJsonObjectPatcher replaceCaptureStreamNumberRearSatOnly failed mode=" + modeName + " " + t);
+            return false;
+        }
+    }
+
+    private static boolean removeUsecase(
+            JSONObject root,
+            String usecaseName,
+            Object host
+    ) {
+        try {
+            JSONObject usecaseInfo = root.optJSONObject("usecase_info");
+
+            if (usecaseInfo == null || !usecaseInfo.has(usecaseName)) {
+                return false;
+            }
+
+            Object old = usecaseInfo.opt(usecaseName);
+            usecaseInfo.remove(usecaseName);
+
+            log(host, "CameraUnitJsonObjectPatcher remove usecase_info " + usecaseName + " old=" + String.valueOf(old));
+
+            return true;
+        } catch (Throwable t) {
+            log(host, "CameraUnitJsonObjectPatcher removeUsecase failed usecase=" + usecaseName + " " + t);
+            return false;
+        }
+    }
+
 
     private static boolean addModeToCameraType(
             JSONObject root,
@@ -254,6 +361,27 @@ public final class CameraUnitJsonObjectPatcher {
             return true;
         } catch (Throwable t) {
             log(host, "CameraUnitJsonObjectPatcher putModeOperation failed mode=" + modeName + " " + t);
+            return false;
+        }
+    }
+
+    private static boolean putModeOperationIfMissing(
+            JSONObject root,
+            String modeName,
+            String operationMode,
+            Object host
+    ) {
+        try {
+            JSONObject modeOperation = root.optJSONObject("mode_operation_mode");
+
+            if (modeOperation != null && modeOperation.has(modeName)) {
+                log(host, "CameraUnitJsonObjectPatcher mode_operation_mode " + modeName + " already exists, keep=" + modeOperation.optString(modeName, ""));
+                return false;
+            }
+
+            return putModeOperation(root, modeName, operationMode, host);
+        } catch (Throwable t) {
+            log(host, "CameraUnitJsonObjectPatcher putModeOperationIfMissing failed mode=" + modeName + " " + t);
             return false;
         }
     }
@@ -408,6 +536,30 @@ public final class CameraUnitJsonObjectPatcher {
             return true;
         } catch (Throwable t) {
             log(host, "CameraUnitJsonObjectPatcher put2Dol failed mode=" + modeName + " cameraType=" + cameraType + " " + t);
+            return false;
+        }
+    }
+
+    private static boolean putCaptureStreamNumberIfMissingMode(
+            JSONObject root,
+            String modeName,
+            boolean rearWide,
+            boolean rearMain,
+            boolean rearTele,
+            boolean rearSat,
+            Object host
+    ) {
+        try {
+            JSONObject captureStreamNumber = root.optJSONObject("capture_stream_number");
+
+            if (captureStreamNumber != null && captureStreamNumber.has(modeName)) {
+                log(host, "CameraUnitJsonObjectPatcher capture_stream_number " + modeName + " already exists, keep original");
+                return false;
+            }
+
+            return putCaptureStreamNumber(root, modeName, rearWide, rearMain, rearTele, rearSat, host);
+        } catch (Throwable t) {
+            log(host, "CameraUnitJsonObjectPatcher putCaptureStreamNumberIfMissingMode failed mode=" + modeName + " " + t);
             return false;
         }
     }
@@ -698,6 +850,12 @@ public final class CameraUnitJsonObjectPatcher {
         return false;
     }
 
+
+
+
+
+
+
     private static JSONArray createGrModeCase() {
         JSONArray array = new JSONArray();
 
@@ -743,6 +901,29 @@ public final class CameraUnitJsonObjectPatcher {
         return array;
     }
 
+
+    private static JSONArray createSatStreetCase() {
+        JSONArray array = new JSONArray();
+
+        putPair(array, "capture_meta", "rear_sat");
+        putPair(array, "preview", "rear_sat");
+        putPair(array, "raw16_output", "rear_main");
+        putPair(array, "raw16_output", "rear_wide");
+        putPair(array, "raw16_output", "rear_tele");
+        putPair(array, "raw_output", "rear_main");
+        putPair(array, "raw_output", "rear_wide");
+        putPair(array, "raw_output", "rear_tele");
+        putPair(array, "capture_yuv", "rear_main");
+        putPair(array, "capture_yuv", "rear_wide");
+        putPair(array, "capture_yuv", "rear_tele");
+        putPair(array, "preview_in_preview", "rear_sat");
+        putPair(array, "capture_raw10_dol", "rear_main");
+        putPair(array, "capture_raw10_dol", "rear_tele");
+
+        return array;
+    }
+
+
     private static void putPair(JSONArray array, String key, String value) {
         try {
             JSONObject object = new JSONObject();
@@ -774,6 +955,7 @@ public final class CameraUnitJsonObjectPatcher {
     private static boolean isEmpty(String value) {
         return value == null || value.trim().length() == 0;
     }
+
 
     private static boolean hasModeInCameraType(JSONObject root, String cameraType, String modeName) {
         try {
@@ -851,6 +1033,33 @@ public final class CameraUnitJsonObjectPatcher {
         }
     }
 
+    private static boolean hasCaptureStreamRearSatOnly(JSONObject root, String modeName) {
+        try {
+            JSONObject captureStreamNumber = root.optJSONObject("capture_stream_number");
+
+            if (captureStreamNumber == null) {
+                return false;
+            }
+
+            JSONObject modeObject = captureStreamNumber.optJSONObject(modeName);
+
+            if (modeObject == null) {
+                return false;
+            }
+
+            JSONArray names = modeObject.names();
+
+            if (names == null || names.length() != 1) {
+                return false;
+            }
+
+            return modeObject.has("rear_sat") && hasCaptureStream(root, modeName, "rear_sat");
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+
     private static void verify(JSONObject root, Object host) {
         boolean grOperation = hasModeOperation(root, MODE_GR, OPERATION_GR);
         boolean grUsecase = hasUsecase(root, "gr_mode_case");
@@ -875,6 +1084,16 @@ public final class CameraUnitJsonObjectPatcher {
         boolean vibeRearMain = hasModeInCameraType(root, "rear_main", MODE_VIBE);
         boolean vibeRearTele = hasModeInCameraType(root, "rear_tele", MODE_VIBE);
         boolean vibeRearSat = hasModeInCameraType(root, "rear_sat", MODE_VIBE);
+
+        boolean aiOperation = hasModeOperation(root, MODE_AI_SCENERY, OPERATION_AI_SCENERY);
+        boolean aiRearMain = hasModeInCameraType(root, "rear_main", MODE_AI_SCENERY);
+        boolean aiRearSat = hasModeInCameraType(root, "rear_sat", MODE_AI_SCENERY);
+        boolean aiRearWide = hasModeInCameraType(root, "rear_wide", MODE_AI_SCENERY);
+        boolean aiRearTele = hasModeInCameraType(root, "rear_tele", MODE_AI_SCENERY);
+        boolean aiCaptureRearSatOnly = hasCaptureStreamRearSatOnly(root, MODE_AI_SCENERY);
+        boolean aiUsecase = hasUsecase(root, "ai_scenery_mode_case");
+        boolean satStreetUsecase = hasUsecase(root, "sat_street_case");
+
 
         boolean rearMainCustomInfo = hasRearMainCustomInfo(root);
 
@@ -901,6 +1120,19 @@ public final class CameraUnitJsonObjectPatcher {
                         + " rearTele=" + vibeRearTele
                         + " rearSat=" + vibeRearSat
                         + " rearMainCustomInfo=" + rearMainCustomInfo
+        );
+
+        log(
+                host,
+                "CameraUnitJsonObjectPatcher verify AI_SCENERY_V15_EXACT"
+                        + " operation8001=" + aiOperation
+                        + " rearMain=" + aiRearMain
+                        + " rearSat=" + aiRearSat
+                        + " rearWideShouldFalse=" + aiRearWide
+                        + " rearTeleShouldFalse=" + aiRearTele
+                        + " captureRearSatOnly=" + aiCaptureRearSatOnly
+                        + " satStreetUsecase=" + satStreetUsecase
+                        + " noAiUsecase=" + !aiUsecase
         );
     }
 
